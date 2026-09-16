@@ -18,7 +18,7 @@
     <main class="phone" id="phone">
       <div class="phone-top" aria-hidden="true"><span>9:41</span><span>●●● ▰</span></div>
       <header class="app-header">
-        <div class="app-brand"><span class="brand-spark" aria-hidden="true">✦</span> cielo <span class="brand-demo">demo</span></div>
+        <div class="app-brand">Antecipa <span class="brand-demo">protótipo</span></div>
         <button class="icon-button" id="notifyButton" type="button" aria-label="Simular notificação do Antecipa" title="Simular notificação">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>
           <span class="notification-dot" id="notificationDot"></span>
@@ -46,8 +46,8 @@
 
         <section id="antecipaView" aria-label="Antecipa">
           <div class="page-intro">
-            <div><span class="eyebrow">INTELIGÊNCIA DE CAIXA</span><h1>Antecipa<span>.</span></h1></div>
-            <p>Seu negócio, alguns passos à frente.</p>
+            <div><span class="eyebrow">VISÃO DO NEGÓCIO</span><h1>Seu caixa, à frente</h1></div>
+            <p>Veja o que pode acontecer e decida com tempo.</p>
           </div>
 
           <div class="shop-picker">
@@ -61,11 +61,10 @@
           </div>
 
           <section class="card chart-card" aria-labelledby="chartTitle">
-            <div class="card-heading"><div><span class="eyebrow">OLHANDO PARA FRENTE</span><h2 id="chartTitle">Seu caixa previsto</h2></div><span class="soft-icon" aria-hidden="true">↗</span></div>
-            <p class="support-copy">A faixa mostra o que pode acontecer; a linha mostra o cenário mediano.</p>
+            <div class="card-heading"><div><span class="eyebrow">PRÓXIMOS DIAS</span><h2 id="chartTitle">Previsão de caixa</h2></div><span class="soft-icon" aria-hidden="true">↗</span></div>
+            <p class="support-copy">A linha mostra o cenário central. A área clara indica a variação possível.</p>
             <div id="chart" class="chart" role="img" aria-label="Gráfico da previsão do caixa"></div>
-            <div class="chart-legend"><span><i class="legend-line"></i>Mediana</span><span><i class="legend-band"></i>Faixas de 50% e 95%</span></div>
-            <p id="chartNote" class="small-note"></p>
+            <div class="chart-legend"><span><i class="legend-line"></i>Caminho central</span><span><i class="legend-band"></i>Faixa de 95%</span></div>
           </section>
 
           <section class="card status-card" aria-labelledby="statusTitle">
@@ -80,13 +79,14 @@
             <p id="marginWarning" class="margin-warning" hidden></p>
           </section>
 
-          <section class="card simulator-card" aria-labelledby="simTitle">
+          <section id="simulatorSection" class="card simulator-card" aria-labelledby="simTitle">
             <div class="card-heading"><div><span class="eyebrow">TESTE OUTRO CAMINHO</span><h2 id="simTitle">Simulador</h2></div><span class="soft-icon" aria-hidden="true">◌</span></div>
             <p class="support-copy">Experimente ajustes nas próximas vendas e compare o resultado estimado.</p>
             <label class="slider-label" for="pixRange">Desconto para pagamento no Pix <output id="pixValue" for="pixRange">0%</output></label>
-            <input id="pixRange" type="range" min="0" max="5" step="1" value="0">
-            <label class="slider-label" for="installmentsRange">Parcelamento máximo <output id="installmentsValue" for="installmentsRange">4×</output></label>
-            <input id="installmentsRange" type="range" min="1" max="4" step="1" value="4">
+            <input id="pixRange" type="range" min="0" max="6" step="0.5" value="0">
+            <label class="slider-label" for="installmentsRange">Parcelamento máximo <output id="installmentsValue" for="installmentsRange">3×</output></label>
+            <input id="installmentsRange" type="range" min="0" max="3" step="1" value="0">
+            <div id="simulatorResult" class="simulator-result" aria-live="polite"></div>
             <p id="simulatorNote" class="small-note" role="status"></p>
           </section>
 

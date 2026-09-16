@@ -22,7 +22,8 @@
     none: { title: 'Não fazer nada', summary: 'Veja como o caixa evolui sem uma nova medida.', how: 'Nenhuma mudança é aplicada ao fluxo projetado.', caution: 'Um risco identificado permanece no cenário.' },
     negotiate: { title: 'Conversar com o fornecedor', summary: 'Simule deslocar um pagamento por sete dias.', how: 'O vencimento do próximo fornecedor é deslocado em sete dias na simulação. A despesa continua no caixa futuro.', caution: 'Depende do aceite do fornecedor; ausência de multa é hipótese da demonstração.' },
     reduce: { title: 'Rever gastos variáveis', summary: 'Simule uma redução temporária de custos.', how: 'A simulação reduz 10% dos gastos operacionais variáveis do período.', caution: 'É uma hipótese: uma redução real pode afetar a operação e as vendas.' },
-    advance: { title: 'Antecipar parte dos recebíveis', summary: 'Receba antes e compare o custo e as entradas futuras.', how: 'O motor traz para hoje parte da agenda de recebíveis, desconta a taxa ilustrativa e retira esses valores das datas originais.', caution: 'A agenda exibida não comprova elegibilidade real. Taxas, prazos e disponibilidade dependem de uma oferta efetiva.' }
+    advance: { title: 'Antecipar parte dos recebíveis', summary: 'Receba antes e compare o custo e as entradas futuras.', how: 'O motor traz para hoje parte da agenda de recebíveis, desconta a taxa ilustrativa e retira esses valores das datas originais.', caution: 'A agenda exibida não comprova elegibilidade real. Taxas, prazos e disponibilidade dependem de uma oferta efetiva.' },
+    mix: { title: 'Ajustar as formas de pagamento', summary: 'Simule incentivo ao Pix e menos parcelas nas vendas futuras.', how: 'O motor simula a migração de parte das vendas no crédito para Pix e altera o prazo das novas vendas parceladas. O desconto concedido no Pix aparece como custo.', caution: 'A migração de clientes é uma hipótese; o desconto tem custo e não garante mudança real no comportamento de compra.' }
   };
 
   function currentHorizon() {
@@ -37,9 +38,8 @@
   }
   function options() {
     const pixDiscount = Number($('pixRange').value);
-    const maxInstallments = Number($('installmentsRange').value);
-    // Campos extras são ignorados por versões antigas do motor.
-    return { pixDiscount, pixDiscountPct: pixDiscount, maxInstallments };
+    const maxInstall = [3, 4, 6, 12][Number($('installmentsRange').value)] ?? 3;
+    return { pixDiscount, maxInstall };
   }
   function evaluate(extra = options()) {
     if (!state.shop || !state.data || typeof evaluateActions !== 'function') return [];
@@ -94,15 +94,14 @@
     const quantiles = currentQuantiles();
     const dates = state.data?.dates;
     const n = Math.min(state.horizon, dates?.length ?? 0);
-    const required = ['q2_5', 'q25', 'q50', 'q75', 'q97_5'];
+    const required = ['q2_5', 'q50', 'q97_5'];
     if (!n || !required.every(key => Array.isArray(quantiles?.[key]) && quantiles[key].length >= n && quantiles[key].slice(0, n).every(value => finite(value) !== null))) {
       $('chart').innerHTML = '<div class="chart-empty">A faixa de previsão ainda não está disponível para este negócio.</div>';
       $('chart').setAttribute('aria-label', 'Faixa de previsão indisponível');
-      $('chartNote').textContent = 'Aguardando os quantis calculados pelo motor de previsão.';
       return;
     }
     const q = key => quantiles[key].slice(0, n).map(Number);
-    const lower95 = q('q2_5'), lower50 = q('q25'), median = q('q50'), upper50 = q('q75'), upper95 = q('q97_5');
+    const lower95 = q('q2_5'), median = q('q50'), upper95 = q('q97_5');
     const all = [...lower95, ...upper95, 0];
     const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max(1000, (hi - lo) * .1);
     const min = lo - pad, max = hi + pad;
@@ -117,11 +116,10 @@
     }).join('');
     const zero = y(0);
     const firstNegative = currentHorizon()?.firstNegativeDay;
-    const markerIndex = typeof firstNegative === 'string' ? dates.slice(0, n).indexOf(firstNegative) : -1;
+    const markerIndex = shopDiagnosis() !== 'saudavel' && typeof firstNegative === 'string' ? dates.slice(0, n).indexOf(firstNegative) : -1;
     const marker = markerIndex >= 0 ? `<line x1="${x(markerIndex)}" x2="${x(markerIndex)}" y1="${T}" y2="${H - B}" stroke="#df8a37" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="${x(markerIndex)}" cy="${y(median[markerIndex])}" r="4" fill="#df8a37"/><text x="${Math.min(W - 38, Math.max(L + 20, x(markerIndex)))}" y="${T + 9}" text-anchor="middle" font-size="9" font-weight="700" fill="#ae671d">${day(firstNegative)}</text>` : '';
-    $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${grid}<line x1="${L}" x2="${W - R}" y1="${zero}" y2="${zero}" stroke="#60798b" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${L - 6}" y="${zero - 3}" text-anchor="end" font-size="9" fill="#566f81">zero</text><path d="${band(lower95, upper95)}" fill="#d7eaf6"/><path d="${band(lower50, upper50)}" fill="#a9d4ee"/><path d="${line(median)}" fill="none" stroke="#0877b8" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>${marker}<text x="${L}" y="${H - 8}" font-size="9" fill="#7b92a3">${day(dates[0])}</text><text x="${W - R}" y="${H - 8}" text-anchor="end" font-size="9" fill="#7b92a3">${day(dates[n - 1])}</text></svg>`;
-    $('chart').setAttribute('aria-label', `Saldo projetado por ${n} dias. Mediana e faixas de 50% e 95%. ${markerIndex >= 0 ? `Primeiro dia de risco destacado: ${day(firstNegative)}.` : 'Sem primeiro dia negativo destacado.'}`);
-    $('chartNote').textContent = state.shop.uncertainty?.method || 'Faixas derivadas de cenários simulados com dados sintéticos.';
+    $('chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${grid}<line x1="${L}" x2="${W - R}" y1="${zero}" y2="${zero}" stroke="#66849b" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${L - 6}" y="${zero - 3}" text-anchor="end" font-size="9" fill="#566f81">zero</text><path d="${band(lower95, upper95)}" fill="#d8eaf7"/><path d="${line(median)}" fill="none" stroke="#0877bf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${marker}<text x="${L}" y="${H - 8}" font-size="9" fill="#7b92a3">${day(dates[0])}</text><text x="${W - R}" y="${H - 8}" text-anchor="end" font-size="9" fill="#7b92a3">${day(dates[n - 1])}</text></svg>`;
+    $('chart').setAttribute('aria-label', `Saldo projetado por ${n} dias. Linha central e faixa de 95%. ${markerIndex >= 0 ? `Primeiro dia de risco destacado: ${day(firstNegative)}.` : 'Sem primeiro dia negativo destacado.'}`);
   }
 
   function renderStatus() {
@@ -134,12 +132,16 @@
       return;
     }
     const config = {
-      saudavel: { symbol: '✓', title: 'Caixa estável na maioria dos cenários', copy: `No fim de ${state.horizon} dias, ${pct(h.probPositiveClose)} dos cenários simulados fecham com saldo positivo. Continue acompanhando os dias intermediários.` },
+      saudavel: { symbol: '✓', title: 'Seu cenário de caixa é positivo', copy: `No fim de ${state.horizon} dias, ${pct(h.probPositiveClose)} dos cenários simulados fecham com saldo positivo. Siga acompanhando a previsão.` },
       timing: { symbol: '!', title: 'Atenção ao prazo dos pagamentos', copy: `${pct(h.probNegative)} dos cenários simulados passam por saldo negativo em algum momento dos próximos ${state.horizon} dias. O dia de maior concentração do primeiro aperto é ${day(h.firstNegativeDay)}.` },
       margem: { symbol: '!', title: 'Entradas podem não cobrir as saídas', copy: `${pct(h.diagnosisFreq?.margem)} dos cenários foram classificados como problema de margem. Antecipar recebíveis não corrige esse desequilíbrio e acrescenta custo.` }
     }[diagnosis];
     const hole = finite(h.medianHole);
-    $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p><div class="status-stat"><div class="stat-box"><strong>${pct(h.probNegative)}</strong><span>cenários com algum saldo negativo</span></div><div class="stat-box"><strong>${hole !== null ? money(Math.abs(hole)) : 'Indisponível'}</strong><span>buraco mediano, quando ocorre</span></div></div>${diagnosis !== 'saudavel' ? '<button class="status-cta" type="button" id="seeOptions">Ver o que fazer ↓</button>' : ''}`;
+    if (diagnosis === 'saudavel') {
+      $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p>`;
+      return;
+    }
+    $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p><div class="status-stat"><div class="stat-box"><strong>${pct(h.probNegative)}</strong><span>cenários com algum saldo negativo</span></div><div class="stat-box"><strong>${hole !== null ? money(Math.abs(hole)) : 'Indisponível'}</strong><span>buraco mediano, quando ocorre</span></div></div><button class="status-cta" type="button" id="seeOptions">Ver o que fazer ↓</button>`;
     $('seeOptions')?.addEventListener('click', () => $('choicesSection').scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
@@ -147,13 +149,14 @@
     const diagnosis = shopDiagnosis();
     const evaluated = evaluate();
     const baseline = evaluated.find(item => item.action === 'none') || null;
-    const allowed = evaluated.filter(item => !(diagnosis === 'margem' && item.action === 'advance'));
+    const allowed = evaluated.filter(item => !(diagnosis === 'margem' && ['advance', 'mix'].includes(item.action)));
     const baselineItems = allowed.filter(item => item.action === 'none');
-    const alternatives = allowed.filter(item => item.action !== 'none').sort((a, b) => actionCost(a) - actionCost(b));
+    const deficit = Math.max(0, -(finite(baseline?.min) ?? 0));
+    // Só apresentar como alternativa uma ação que ajuda e custa menos que o buraco.
+    // Uma ação descartada ainda pode ser explorada no simulador, com seu custo visível.
+    const alternatives = allowed.filter(item => item.action !== 'none' && (improvement(item, baseline) ?? 0) > 0.01 && actionCost(item) <= deficit).sort((a, b) => actionCost(a) - actionCost(b));
     state.actions = [...baselineItems, ...alternatives];
-    $('choicesIntro').textContent = diagnosis === 'saudavel'
-      ? 'Compare caminhos possíveis, mesmo sem um alerta principal para este período.'
-      : 'Veja o efeito estimado no caixa antes de escolher qualquer medida.';
+    $('choicesIntro').textContent = 'Compare as alternativas que ajudam a reduzir o aperto nos próximos 60 dias.';
     $('actionList').innerHTML = state.actions.length ? state.actions.map((item, index) => {
       const delta = improvement(item, baseline);
       const cost = actionCost(item);
@@ -186,28 +189,49 @@
 
   function renderSimulator() {
     $('pixValue').textContent = `${$('pixRange').value}%`;
-    $('installmentsValue').textContent = `${$('installmentsRange').value}×`;
-    const reference = evaluate({ pixDiscount: 0, pixDiscountPct: 0, maxInstallments: 4 });
+    $('installmentsValue').textContent = `${options().maxInstall}×`;
+    const reference = evaluate({ pixDiscount: 0, maxInstall: 3 });
     const adjusted = evaluate();
-    const changed = JSON.stringify(reference) !== JSON.stringify(adjusted);
-    const defaultControls = $('pixRange').value === '0' && $('installmentsRange').value === '4';
+    const base = adjusted.find(item => item.action === 'none');
+    const mix = adjusted.find(item => item.action === 'mix');
+    const baselineMix = reference.find(item => item.action === 'mix');
+    const changed = JSON.stringify(mix) !== JSON.stringify(baselineMix);
+    const defaultControls = $('pixRange').value === '0' && $('installmentsRange').value === '0';
+    const delta = mix ? improvement(mix, base) : null;
+    const cost = mix ? actionCost(mix) : null;
+    const deficit = Math.max(0, -(finite(base?.min) ?? 0));
+    $('simulatorResult').innerHTML = mix ? `<div><span>Custo do ajuste</span><strong>${money(cost)}</strong></div><div><span>Melhora do pior saldo</span><strong>${delta !== null ? money(Math.max(0, delta)) : 'Indisponível'}</strong></div>` : '';
     $('simulatorNote').textContent = defaultControls
-      ? 'Mova os controles para testar. As faixas do gráfico representam o cenário base e não são recalculadas aqui.'
+      ? shopDiagnosis() === 'margem'
+        ? 'Você pode testar o mix, mas adiantar entradas não corrige a margem. A faixa do gráfico representa o cenário base.'
+        : 'Ajuste os controles para comparar a ação de mix. A faixa do gráfico representa o cenário base.'
       : changed
-        ? 'Alternativas recalculadas pelo motor para estes controles. As faixas do gráfico continuam no cenário base.'
-        : 'Esta versão do motor ainda não aplica esses controles ao cálculo. Os valores acima são uma hipótese de interface, sem efeito financeiro exibido.';
+        ? shopDiagnosis() === 'margem'
+          ? 'O ajuste pode adiantar entradas, mas não corrige o problema de margem; o desconto ainda tem custo. A faixa do gráfico continua no cenário base.'
+          : cost > deficit && deficit > 0
+          ? 'O custo deste ajuste supera o buraco estimado. Compare outras medidas antes de decidir. A faixa do gráfico continua no cenário base.'
+          : 'A ação de mix foi recalculada com essas hipóteses. O desconto tem custo; a faixa do gráfico continua no cenário base.'
+        : 'Esses ajustes não produziram diferença mensurável neste cenário. A faixa do gráfico continua no cenário base.';
   }
 
   function renderAll() {
     renderChart();
     renderStatus();
-    renderActions();
-    renderSimulator();
+    const showChoices = shopDiagnosis() !== 'saudavel';
+    $('choicesSection').hidden = !showChoices;
+    $('simulatorSection').hidden = !showChoices;
+    if (showChoices) {
+      renderActions();
+      renderSimulator();
+    } else {
+      state.actions = [];
+    }
     closeDetail();
   }
   function selectShop(id) {
     state.shop = state.data?.shops?.find(shop => shop.id === id) || state.data?.shops?.[0] || null;
     if (state.shop) $('shopSelect').value = state.shop.id;
+    $('notice').hidden = true;
     renderAll();
     $('notificationDot').hidden = shopDiagnosis() === 'saudavel';
   }
@@ -218,7 +242,9 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
     });
+    $('notice').hidden = true;
     renderAll();
+    $('notificationDot').hidden = shopDiagnosis() === 'saudavel';
   }
   function notificationText() {
     const h = currentHorizon();
