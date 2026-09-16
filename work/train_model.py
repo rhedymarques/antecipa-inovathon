@@ -104,11 +104,18 @@ for chave, perfil in perfis['negocios'].items():
  # em regime do próprio gerador (entra/sai steady-state), não o repique pós-choque da previsão.
  diag90 = perfil['diagnostico_90d']
  diagnosis = {'entradas90': diag90['entra_90d'], 'saidas90': diag90['sai_90d']}
- uncertainty = montecarlo.banda_incerteza(
-  forecast, actual - testpred, mix, rates, delays, receb_fut[chave], expenses_total,
-  perfil['saldo_inicial'], future, mc)
- uncertainty['method'] = ('2000 cenários por reamostragem dos resíduos do teste reservado de 60 dias; '
-                          'despesas fixas no cenário central. Faixa da previsão, não probabilidade de falência.')
+ # dispersão do mix calibrada pela volatilidade de vendas do negócio (o mix diário do histórico
+ # sintético é constante, então usamos o CV das vendas como referência de variação observada).
+ cv = float(np.std(y) / np.mean(y))
+ concentracao = max(2.0, 3.0 / cv ** 2 - 1.0)
+ uncertainty = montecarlo.simular_cenarios(
+  forecast, actual - testpred, mix, concentracao, rates, delays, receb_fut[chave], expenses_total,
+  perfil['saldo_inicial'], future, diagnosis['entradas90'], diagnosis['saidas90'], mc)
+ uncertainty['method'] = ('2000 cenários. Previsível (fixo): recebíveis de vendas já feitas, aluguel, folha, '
+                          'imposto e contas com data conhecida. Incerto (sorteado por cenário): volume de vendas '
+                          '(reamostragem dos resíduos do teste de 60 dias), mix de pagamento (Dirichlet em torno do '
+                          'mix histórico, dispersão pela volatilidade de vendas) e chargeback de 0% a 1,5% sobre o '
+                          'crédito (hipótese). Faixa principal: 95% (p2,5–p97,5). Diagnóstico calculado em cada cenário.')
  shops.append({'id': chave, 'name': perfil['nome'], 'sector': perfil['setor'],
                'age': perfil['meses_operando'], 'balance': perfil['saldo_inicial'],
                'mix': mix, 'rates': rates, 'delays': delays,
