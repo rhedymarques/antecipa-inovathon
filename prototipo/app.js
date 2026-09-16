@@ -25,6 +25,13 @@
     advance: { title: 'Antecipar parte dos recebíveis', summary: 'Receba antes e compare o custo e as entradas futuras.', how: 'O motor traz para hoje parte da agenda de recebíveis, desconta a taxa ilustrativa e retira esses valores das datas originais.', caution: 'A agenda exibida não comprova elegibilidade real. Taxas, prazos e disponibilidade dependem de uma oferta efetiva.' },
     mix: { title: 'Ajustar as formas de pagamento', summary: 'Simule incentivo ao Pix e menos parcelas nas vendas futuras.', how: 'O motor simula a migração de parte das vendas no crédito para Pix e altera o prazo das novas vendas parceladas. O desconto concedido no Pix aparece como custo.', caution: 'A migração de clientes é uma hipótese; o desconto tem custo e não garante mudança real no comportamento de compra.' }
   };
+  const actionSteps = {
+    none: ['Acompanhe a previsão nos próximos dias.', 'Reavalie se aparecer um novo alerta.'],
+    negotiate: ['Confira o vencimento e o valor do próximo pagamento ao fornecedor.', 'Converse com o fornecedor sobre um prazo de sete dias e confirme eventuais encargos.', 'Atualize o planejamento apenas se o novo prazo for aceito.'],
+    reduce: ['Revise os gastos variáveis previstos para o período.', 'Identifique cortes temporários que não prejudiquem as vendas.', 'Acompanhe o saldo e ajuste o plano se a economia real for menor que a simulada.'],
+    advance: ['Confira quais recebíveis estão disponíveis para antecipação.', 'Peça a taxa e o valor líquido de uma oferta real antes de decidir.', 'Compare também o caixa nas datas em que esses recebíveis deixariam de entrar.'],
+    mix: ['Defina o desconto no Pix e o limite de parcelas que pretende testar.', 'Confira o custo do desconto e comunique as condições aos clientes.', 'Observe a adesão real e reavalie o caixa antes de manter a campanha.']
+  };
 
   function currentHorizon() {
     return state.shop?.uncertainty?.horizons?.[String(state.horizon)] ?? null;
@@ -145,6 +152,21 @@
     $('seeOptions')?.addEventListener('click', () => $('choicesSection').scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
+  function renderExplanation() {
+    const h = currentHorizon(), diagnosis = shopDiagnosis();
+    const content = $('explanationContent');
+    if (!h || !diagnosis) { content.textContent = 'Ainda não há dados suficientes para explicar este cenário.'; return; }
+    const frequencies = h.diagnosisFreq || {};
+    const frequency = finite(frequencies[diagnosis]);
+    const frequencyText = frequency !== null ? `Esse foi o diagnóstico mais frequente (${pct(frequency)} dos cenários).` : '';
+    const text = diagnosis === 'saudavel'
+      ? `A maior parte dos cenários termina o período com saldo positivo. ${frequencyText} Continue acompanhando entradas e saídas; a projeção pode mudar.`
+      : diagnosis === 'timing'
+        ? `As datas das entradas e saídas podem não coincidir. ${h.firstNegativeDay ? `O primeiro aperto aparece com mais frequência em ${day(h.firstNegativeDay)}.` : ''} ${frequencyText} O alerta indica risco de liquidez, não uma despesa já vencida.`
+        : `O diagnóstico aponta desequilíbrio entre entradas e saídas ao longo do período. ${frequencyText} Adiantar um recebimento muda a data do dinheiro, mas não elimina uma despesa recorrente.`;
+    content.textContent = text;
+  }
+
   function renderActions() {
     const diagnosis = shopDiagnosis();
     const evaluated = evaluate();
@@ -176,7 +198,8 @@
     const delta = improvement(item, baseline);
     const end = finite(item.end), baseEnd = finite(baseline?.end);
     const endDelta = end !== null && baseEnd !== null ? end - baseEnd : null;
-    $('detailContent').innerHTML = `<div class="detail-hero"><span class="eyebrow">ENTENDA A ALTERNATIVA</span><h1>${escapeHtml(actionTitle(item))}</h1><p>${escapeHtml(actionSummary(item))}</p></div><div class="detail-metrics"><div class="stat-box"><strong>${money(actionCost(item))}</strong><span>custo direto estimado</span></div><div class="stat-box"><strong>${delta !== null ? money(Math.max(0, delta)) : 'Indisponível'}</strong><span>melhora do pior saldo</span></div></div><div class="detail-card"><h2>Como funciona</h2><p>${escapeHtml(item.how || meta.how || 'O motor aplica esta alternativa ao cenário e compara a projeção resultante com a referência.')}</p></div><div class="detail-card"><h2>O que muda depois</h2><p>Ao final dos 60 dias da simulação, a diferença em relação a não fazer nada é ${endDelta !== null ? money(endDelta) : 'indisponível'}. ${finite(item.negativeDays) !== null ? `O fluxo simulado ainda tem ${Number(item.negativeDays)} dia(s) com saldo negativo.` : 'A quantidade de dias negativos não foi informada.'} Valores podem mudar com vendas, despesas e prazos reais.</p></div><div class="detail-card detail-caution"><h2>Antes de decidir</h2><p>${escapeHtml(item.caution || meta.caution || 'Confira as condições reais e os efeitos sobre os próximos meses antes de agir.')}</p></div><p class="detail-footer">Esta tela explica uma simulação. Nenhuma negociação, antecipação ou contratação é executada aqui.</p>`;
+    const steps = actionSteps[item.action] || ['Confira as condições reais da alternativa.', 'Compare custos e efeitos futuros antes de decidir.'];
+    $('detailContent').innerHTML = `<div class="detail-hero"><span class="eyebrow">ENTENDA A ALTERNATIVA</span><h1>${escapeHtml(actionTitle(item))}</h1><p>${escapeHtml(actionSummary(item))}</p></div><div class="detail-metrics"><div class="stat-box"><strong>${money(actionCost(item))}</strong><span>custo direto estimado</span></div><div class="stat-box"><strong>${delta !== null ? money(Math.max(0, delta)) : 'Indisponível'}</strong><span>melhora do pior saldo</span></div></div><div class="detail-card"><h2>Antes e depois · 60 dias</h2><div class="before-after"><div><span>Sem a medida</span><strong>${money(finite(baseline?.min))}</strong><small>pior saldo</small></div><span aria-hidden="true">→</span><div><span>Com a medida</span><strong>${money(finite(item.min))}</strong><small>pior saldo</small></div></div></div><div class="detail-card"><h2>Como funciona</h2><p>${escapeHtml(item.how || meta.how || 'O motor aplica esta alternativa ao cenário e compara a projeção resultante com a referência.')}</p></div><div class="detail-card"><h2>O que muda depois</h2><p>Ao final dos 60 dias da simulação, a diferença em relação a não fazer nada é ${endDelta !== null ? money(endDelta) : 'indisponível'}. ${finite(item.negativeDays) !== null ? `O fluxo simulado ainda tem ${Number(item.negativeDays)} dia(s) com saldo negativo.` : 'A quantidade de dias negativos não foi informada.'} Valores podem mudar com vendas, despesas e prazos reais.</p></div><div class="detail-card"><h2>Plano da sessão</h2><p>Passos para avaliar esta medida; nenhuma etapa é executada automaticamente.</p><ol class="plan-steps">${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol></div><div class="detail-card detail-caution"><h2>Antes de decidir</h2><p>${escapeHtml(item.caution || meta.caution || 'Confira as condições reais e os efeitos sobre os próximos meses antes de agir.')}</p></div><p class="detail-footer">Esta tela explica uma simulação. Nenhuma negociação, antecipação ou contratação é executada aqui.</p>`;
     $('antecipaView').hidden = true;
     $('detailView').hidden = false;
     scrollTop();
@@ -217,6 +240,7 @@
   function renderAll() {
     renderChart();
     renderStatus();
+    renderExplanation();
     const showChoices = shopDiagnosis() !== 'saudavel';
     $('choicesSection').hidden = !showChoices;
     $('simulatorSection').hidden = !showChoices;

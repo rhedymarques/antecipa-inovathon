@@ -43,3 +43,6 @@
 .simulator-result span{display:block;color:#668195;font-size:10px}
 .simulator-result strong{display:block;color:#155278;font-size:14px;margin-top:3px}
 @media(max-width:480px){.app-header{height:60px}.notice{top:83px}}
+
+.explanation-card h2{margin:7px 0 0}.explanation-content{font-size:12px;line-height:1.6;color:#4d697d;margin-top:10px}
+.before-after{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}.before-after>div{background:#f1f7fb;border-radius:9px;padding:10px}.before-after span,.before-after small{display:block;color:#6b8396;font-size:10px}.before-after strong{display:block;color:#164665;font-size:15px;margin:4px 0}.plan-steps{padding-left:20px;margin:10px 0 0;color:#526f83;font-size:12px;line-height:1.55}.plan-steps li+li{margin-top:6px}
