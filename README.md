@@ -8,7 +8,7 @@ Protótipo independente, sem vínculo oficial ou integração com a Cielo. Todos
 
 ## Acesso do grupo
 
-Consulte o [Guia do grupo](GUIA_DO_GRUPO.md) para convidar colegas e abrir a demonstração localmente. O acesso ao repositório privado é separado do acesso ao site hospedado.
+Consulte o [Guia do grupo](GUIA_DO_GRUPO.md) para clonar o repositório público e abrir a demonstração localmente. A visibilidade do código é separada do acesso ao site hospedado.
 
 ## Executar
 
@@ -36,7 +36,7 @@ Taxas: Pix 0%; débito 1,2%; crédito 2,5%; 3 parcelas 3,2%. Liquidação em dia
 4. Confira 60 dias para ver custos e obrigações deslocadas.
 5. Abra Modelo e validação e Origem dos dados; exporte o fluxo.
 
-O plano existe apenas durante a sessão e não é persistido. Nenhum dado pessoal é solicitado. A versão hospedada começa privada.
+O plano existe apenas durante a sessão e não é persistido. Nenhum dado pessoal é solicitado. A publicação do site é gerenciada separadamente do repositório público.
 
 ## Versão 2: proposta da equipe
 

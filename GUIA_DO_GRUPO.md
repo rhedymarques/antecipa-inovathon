@@ -1,16 +1,14 @@
 # Guia do grupo — Copiloto de Caixa
 
-## Acessar o repositório privado
+## Acessar o repositório público
 
-O proprietário precisa convidar cada colega em **Settings → Collaborators → Add people**, pesquisando o usuário ou e-mail da conta GitHub. Cada colega precisa aceitar o convite recebido. Compartilhar apenas o endereço de um repositório privado não concede acesso.
+O código está disponível publicamente em https://github.com/rhedymarques/copiloto-caixa-inovathon. Qualquer pessoa pode abrir ou clonar o repositório sem convite. Permissão de escrita continua restrita aos colaboradores autorizados no GitHub.
 
-Repositórios de conta pessoal têm proprietário e colaboradores; o convite de colaborador permite contribuir com o código. Para mais granularidade de funções, avaliem um repositório de organização. Não é necessário tornar o repositório público para o grupo colaborar.
-
-Documentação: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository
+Para colaborar, trabalhe em uma branch própria e abra um pull request. Não publique dados reais de clientes, senhas ou chaves: os dados deste projeto são fictícios.
 
 ## Abrir a demonstração no computador
 
-1. Após aceitar o convite, use **Code → Download ZIP** e extraia o arquivo, ou clone o repositório com Git.
+1. Na página pública do repositório, use **Code → Download ZIP** e extraia o arquivo, ou clone com Git.
 2. Instale Python 3.12 ou mais recente, se ainda não tiver Python.
 3. Abra o terminal na pasta extraída e execute:
 
@@ -43,16 +41,16 @@ O script recria dados sintéticos e previsões. O script principal chama também
 - `dist/`: interface, simulador, previsões, pagamentos sintéticos e notas conceituais.
 - `work/train_model.py`: geração reproduzível e treinamento dos modelos individuais.
 - `work/enrich_model.py`: modelo baseado em empresas semelhantes e dados contábeis complementares.
-- `work/test_engine.js`: testes das contas e dos efeitos das ações; execute com `node work/test_engine.js` se tiver Node.js.
+- `work/test_engine.js`: testes das contas, diagnósticos e recomendações; execute com `node work/test_engine.js`.
 - `requirements.txt`: dependências do treinamento.
 
 ## Colaborar
 
-Criem uma branch para cada alteração e abram um pull request antes de integrar na branch principal. Não incluam dados reais de clientes, senhas ou chaves no repositório. Os dados presentes neste projeto são fictícios.
+Criem uma branch para cada alteração e abram um pull request antes de integrar na branch principal. A visibilidade pública permite leitura e clone, mas não concede permissão para enviar mudanças diretamente.
 
 ## Código e site têm acessos separados
 
-Ser colaborador no GitHub não libera automaticamente o site hospedado no Sites. Cada colega já pode executar a demo localmente com as instruções acima. O acesso ao site hospedado deve ser configurado separadamente pelo proprietário.
+O repositório público não torna automaticamente público o site hospedado no Sites. O código pode ser executado localmente pelas instruções acima; acesso e publicação do site continuam sob configuração separada do proprietário.
 
 ## Limitações a explicar no pitch
 

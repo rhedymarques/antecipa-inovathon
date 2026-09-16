@@ -33,6 +33,8 @@ for(const shop of data.shops){
  // recommend(): escolhe uma alternativa; antecipação recomendada nunca excede 1,5× o buraco
  for(const H of [30,60]){const rec=recommend(shop,data,{horizon:H});
   assert(['none','negotiate','reduce','advance','mix'].includes(rec.action));
+  assert(rec.cost<=rec.buraco+1,`${shop.id}: custo recomendado (${rec.cost}) excede o buraco (${rec.buraco})`);
+  if(rec.mode==='margem')assert(!['advance','credit'].includes(rec.action),`${shop.id}: modo MARGEM não pode recomendar antecipação ou crédito`);
   if(rec.action==='advance'){
    const hole=Math.max(0,-Math.min(...base.daily.slice(0,H).map(d=>d.balance)));
    assert(rec.params.advance<=hole*1.5,`${shop.id}: antecipação recomendada excede 1,5× o buraco`);
@@ -47,7 +49,7 @@ for(const shop of data.shops){
 const merc=data.shops.find(s=>s.id==='mercadinho');
 assert(diagnose(merc,data)==='margem','mercadinho deveria ser diagnosticado como margem');
 assert(merc.uncertainty.horizons['60'].diagnosis==='margem','mercadinho deveria mostrar margem em 60 dias');
-assert(recommend(merc,data,{horizon:60}).action==='reduce','margem não pode recomendar antecipação');
+assert(!['advance','credit'].includes(recommend(merc,data,{horizon:60}).action),'margem não pode recomendar antecipação ou crédito');
 assert(recommend(merc,data,{horizon:60}).justificativa.includes('o ajuste é estrutural'));
 // Caso que realmente exige antecipação: mínimo em centavos e reprodução do valor recomendado.
 const fixture={balance:0,mix:[1,0,0,0],rates:[0,0,0,0],delays:[0,1,30,30],
