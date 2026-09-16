@@ -2,15 +2,21 @@
 
 Protótipo independente, sem vínculo oficial ou integração com a Cielo. Todos os dados são sintéticos. Não representa taxas, políticas comerciais ou formatos internos da empresa.
 
+## Acesso do grupo
+
+Consulte o [Guia do grupo](GUIA_DO_GRUPO.md) para convidar colegas e abrir a demonstração localmente. O acesso ao repositório privado é separado do acesso ao site hospedado.
+
 ## Executar
 
-Python 3.12+: `pip install -r requirements.txt`, depois `python work/train_model.py` para gerar dados e previsões. Sirva a pasta `dist` com `python -m http.server 8765 --directory dist` e abra http://localhost:8765.
+Para apenas visualizar, as previsões já estão incluídas: execute `python -m http.server 8765 --bind 127.0.0.1 --directory dist` e abra http://localhost:8765. Não é necessário treinar novamente.
+
+Para recriar os dados e treinar, use Python 3.12+: `pip install -r requirements.txt`, depois `python work/train_model.py` para gerar dados e previsões. Sirva a pasta `dist` com `python -m http.server 8765 --directory dist` e abra http://localhost:8765.
 
 O treinamento usa RandomForestRegressor, 100 árvores por negócio, saída direta de 60 dias. As previsões geradas são consumidas pelo navegador. O simulador recalcula o caixa imediatamente; não retreina ao mover controles. Os dados e o treinamento são reproduzíveis com semente 42. Cenários não são inferências causais. O script principal também executa `work/enrich_model.py`, que acrescenta o quarto negócio com 14 dias de histórico, uma floresta treinada em 18 empresas sintéticas (semente 2026) e os dados contábeis declarados.
 
 ## Validação
 
-Cada negócio contém 620 dias de vendas. Reservam-se os últimos 60 para um teste com origem fixa. Exemplos de treino têm todos os seus alvos antes desse corte. Compara-se MAE em reais por dia com repetição da última semana. Depois da avaliação, treina-se novamente com todo o histórico disponível para prever os próximos 60 dias. Não há comprovação de generalização para dados reais, intervalos calibrados ou previsão de mortalidade empresarial.
+Os três negócios com modelo individual contêm 620 dias de vendas. Reservam-se os últimos 60 para um teste com origem fixa. Exemplos de treino têm todos os seus alvos antes desse corte. Compara-se MAE em reais por dia com repetição da última semana. Depois da avaliação, treina-se novamente com todo o histórico disponível para prever os próximos 60 dias. Não há comprovação de generalização para dados reais, intervalos calibrados ou previsão de mortalidade empresarial.
 
 ## Caixa
 
@@ -20,7 +26,7 @@ Taxas: Pix 0%; débito 1,2%; crédito 2,5%; 3 parcelas 3,2%. Liquidação em dia
 
 ## Demonstração
 
-1. Selecione um dos três negócios fictícios.
+1. Selecione um dos quatro negócios fictícios.
 2. Observe o menor saldo e a data de insuficiência.
 3. Compare negociação, economia e antecipação.
 4. Confira 60 dias para ver custos e obrigações deslocadas.
