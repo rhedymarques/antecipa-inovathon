@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0868ae">
+  <title>Antecipa · protótipo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="stage-caption" aria-hidden="true">
+      <span class="stage-mark">antecipa<span class="stage-dot">.</span></span>
+      <p>Uma visão do seu caixa<br>antes que o dia aperte.</p>
+      <span class="stage-note">Protótipo acadêmico · dados sintéticos</span>
+    </div>
+
+    <main class="phone" id="phone">
+      <div class="phone-top" aria-hidden="true"><span>9:41</span><span>●●● ▰</span></div>
+      <header class="app-header">
+        <div class="app-brand"><span class="brand-spark" aria-hidden="true">✦</span> cielo <span class="brand-demo">demo</span></div>
+        <button class="icon-button" id="notifyButton" type="button" aria-label="Simular notificação do Antecipa" title="Simular notificação">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>
+          <span class="notification-dot" id="notificationDot"></span>
+        </button>
+      </header>
+
+      <div id="notice" class="notice" role="status" hidden>
+        <button id="noticeOpen" class="notice-content" type="button">
+          <span class="notice-icon" aria-hidden="true">✦</span>
+          <span><strong>Antecipa · aviso simulado</strong><span id="noticeText"></span></span>
+          <span aria-hidden="true">›</span>
+        </button>
+        <button id="noticeClose" class="notice-close" type="button" aria-label="Fechar notificação">×</button>
+      </div>
+
+      <div class="app-content" id="appContent">
+        <nav class="product-tabs" aria-label="Áreas do aplicativo">
+          <button type="button" class="product-tab" data-area="inicio">Início</button>
+          <button type="button" class="product-tab" data-area="vendas">Vendas</button>
+          <button type="button" class="product-tab" data-area="caixa">Caixa diário</button>
+          <button type="button" class="product-tab active" data-area="antecipa" aria-current="page">Antecipa</button>
+        </nav>
+
+        <section id="placeholderView" class="placeholder-view" hidden aria-live="polite"></section>
+
+        <section id="antecipaView" aria-label="Antecipa">
+          <div class="page-intro">
+            <div><span class="eyebrow">INTELIGÊNCIA DE CAIXA</span><h1>Antecipa<span>.</span></h1></div>
+            <p>Seu negócio, alguns passos à frente.</p>
+          </div>
+
+          <div class="shop-picker">
+            <label for="shopSelect">Meu negócio</label>
+            <select id="shopSelect" aria-label="Selecionar negócio"></select>
+          </div>
+
+          <div class="period-switch" role="group" aria-label="Período da previsão">
+            <button type="button" data-horizon="30">30 dias</button>
+            <button type="button" data-horizon="60" class="active" aria-pressed="true">60 dias</button>
+          </div>
+
+          <section class="card chart-card" aria-labelledby="chartTitle">
+            <div class="card-heading"><div><span class="eyebrow">OLHANDO PARA FRENTE</span><h2 id="chartTitle">Seu caixa previsto</h2></div><span class="soft-icon" aria-hidden="true">↗</span></div>
+            <p class="support-copy">A faixa mostra o que pode acontecer; a linha mostra o cenário mediano.</p>
+            <div id="chart" class="chart" role="img" aria-label="Gráfico da previsão do caixa"></div>
+            <div class="chart-legend"><span><i class="legend-line"></i>Mediana</span><span><i class="legend-band"></i>Faixas de 50% e 95%</span></div>
+            <p id="chartNote" class="small-note"></p>
+          </section>
+
+          <section class="card status-card" aria-labelledby="statusTitle">
+            <span class="eyebrow">SITUAÇÃO DO NEGÓCIO</span>
+            <div id="statusContent"></div>
+          </section>
+
+          <section id="choicesSection" class="choices-section" aria-labelledby="choicesTitle">
+            <div class="section-heading"><div><span class="eyebrow">COMPARE ANTES DE DECIDIR</span><h2 id="choicesTitle">O que você pode fazer</h2></div></div>
+            <p id="choicesIntro" class="support-copy"></p>
+            <div id="actionList" class="action-list"></div>
+            <p id="marginWarning" class="margin-warning" hidden></p>
+          </section>
+
+          <section class="card simulator-card" aria-labelledby="simTitle">
+            <div class="card-heading"><div><span class="eyebrow">TESTE OUTRO CAMINHO</span><h2 id="simTitle">Simulador</h2></div><span class="soft-icon" aria-hidden="true">◌</span></div>
+            <p class="support-copy">Experimente ajustes nas próximas vendas e compare o resultado estimado.</p>
+            <label class="slider-label" for="pixRange">Desconto para pagamento no Pix <output id="pixValue" for="pixRange">0%</output></label>
+            <input id="pixRange" type="range" min="0" max="5" step="1" value="0">
+            <label class="slider-label" for="installmentsRange">Parcelamento máximo <output id="installmentsValue" for="installmentsRange">4×</output></label>
+            <input id="installmentsRange" type="range" min="1" max="4" step="1" value="4">
+            <p id="simulatorNote" class="small-note" role="status"></p>
+          </section>
+
+          <footer class="disclaimer">Demonstração com dados sintéticos. Nenhuma ação financeira é executada ou contratada.</footer>
+        </section>
+
+        <section id="detailView" class="detail-view" hidden aria-label="Detalhes da alternativa">
+          <button id="backButton" class="back-button" type="button">← Voltar para Antecipa</button>
+          <div id="detailContent"></div>
+        </section>
+      </div>
+
+      <nav class="bottom-nav" aria-label="Navegação principal">
+        <button type="button" data-area="inicio"><span aria-hidden="true">⌂</span>Início</button>
+        <button type="button" data-area="vendas"><span aria-hidden="true">▥</span>Vendas</button>
+        <button type="button" data-area="caixa"><span aria-hidden="true">▤</span>Caixa</button>
+        <button type="button" data-area="antecipa" class="active" aria-current="page"><span aria-hidden="true">✦</span>Antecipa</button>
+      </nav>
+    </main>
+    <p class="stage-side-note">Uma proposta acadêmica independente.<br>Sem integração com o aplicativo Cielo.</p>
+  </div>
+
+  <script src="../dist/engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
