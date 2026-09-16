@@ -74,4 +74,16 @@ const blocked=recommend(early,data,{horizon:60});
 assert(blocked.action!=='advance'&&blocked.partial,'sem antecipação suficiente dentro do teto, explicitar cobertura parcial');
 assert(blocked.justificativa.includes('não fecha a conta sozinha'));
 assert(recommend(data.shops.find(s=>s.id==='vestuario'),data,{horizon:30}).action==='none');
-console.log('PASS: conservação de caixa, antecipação mínima, teto, reprodução, veto de margem, renegociação, redução, choques, diagnóstico e Monte Carlo.');
+// Regra dos 50%: quando cobrir o buraco custa mais que metade dele, recomendar acompanhar.
+const caro={balance:0,mix:[0,0,0,1],rates:[0,0,0,.035],delays:[0,1,30,30],
+ forecast:Array(60).fill(5000),receivables:Array(60).fill(0),
+ expenses:Array.from({length:60},()=>({operating:0,supplier:0,fixed:0}))};
+caro.expenses[5].fixed=80;   // buraco ~R$80; só o mix cobre, e custa ~R$45 (>50% do buraco)
+const crec=recommend(caro,data,{horizon:60});
+assert(crec.action==='none'&&crec.watch,'custo acima de 50% do buraco deve recomendar acompanhar');
+assert(crec.cost<=crec.buraco*0.5+1e-6||crec.action==='none','acompanhar quando cobrir passa de metade do risco');
+assert(crec.justificativa.includes('acompanhando'),'justificativa deve explicar o acompanhamento');
+// No Bar do Léo cobrir custa ~R$451 para um buraco de ~R$502 (>50%): deve virar acompanhar.
+const barR=recommend(data.shops.find(s=>s.id==='bar'),data,{horizon:60});
+assert(barR.action==='none'&&barR.watch,'Bar: custo de cobrir passa de 50% do buraco, deve acompanhar');
+console.log('PASS: conservação de caixa, antecipação mínima, teto, reprodução, veto de margem, regra dos 50%, renegociação, redução, choques, diagnóstico e Monte Carlo.');

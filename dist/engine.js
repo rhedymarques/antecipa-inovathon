@@ -112,6 +112,10 @@ function recommend(shop,data,options={}){
  cand.push(mx||(()=>{const r=simulate(shop,data,{...options,action:'mix',pixDiscount:6,maxInstall:3});return{action:'mix',params:{pixDiscount:6,maxInstall:3},r,cost:r.fee};})());
  const cobre=cand.filter(c=>minH(c.r)>=alvo-1&&c.cost<=buraco+1);
  if(cobre.length){cobre.sort((a,b)=>a.cost-b.cost||minH(b.r)-minH(a.r));const c=cobre[0];
+  // quando cobrir custa mais que metade do buraco, agir se aproxima do próprio risco: melhor
+  // acompanhar (eixo 3 do desafio — não empurrar ação cara para um aperto pequeno).
+  if(c.cost>0.5*buraco)
+   return pack('none',{},base,0,{watch:true,justificativa:`Cobrir esse aperto custaria ${brl(c.cost)}, perto do próprio risco de ${brl(buraco)} — agir custa quase o que se perderia. Não compensa agora: o sistema segue acompanhando e reavalia nos próximos dias, quando o quadro ficar mais claro.`});
   const p=c.action==='mix'?` (desconto de ${c.params.pixDiscount}% no Pix)`:c.action==='advance'?` (${brl(c.params.advance)})`:'';
   return pack(c.action,c.params,c.r,c.cost,{justificativa:`Seu caixa aperta${base.firstNegative?` em ${dia(base.firstNegative)}`:''}, faltando ${brl(buraco)}. ${LABELS[c.action]}${p} cobre esse buraco pelo menor custo (${c.cost>0?brl(c.cost):'sem custo'}) e mantém o saldo no positivo.`});}
  // 4. nada cobre sozinho: a mais barata que chega mais perto, dizendo que não fecha a conta
