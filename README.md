@@ -2,6 +2,10 @@
 
 Protótipo independente, sem vínculo oficial ou integração com a Cielo. Todos os dados são sintéticos. Não representa taxas, políticas comerciais ou formatos internos da empresa.
 
+## Continuar o desenvolvimento
+
+**Colegas e assistentes de IA: comecem pelo [HANDOFF.md](HANDOFF.md).** Ele registra o que já funciona, a arquitetura, como testar, os limites conhecidos e o backlog priorizado. As orientações para agentes estão em [AGENTS.md](AGENTS.md).
+
 ## Acesso do grupo
 
 Consulte o [Guia do grupo](GUIA_DO_GRUPO.md) para convidar colegas e abrir a demonstração localmente. O acesso ao repositório privado é separado do acesso ao site hospedado.
