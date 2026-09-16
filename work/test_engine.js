@@ -3,12 +3,17 @@ const near=(a,b,tol=1e-5)=>assert(Math.abs(a-b)<tol,`${a} != ${b}`);
 const Q=['q2_5','q5','q25','q50','q75','q95','q97_5'];
 for(const shop of data.shops){
  const base=simulate(shop,data);const advance=simulate(shop,data,{action:'advance',advance:3000});const negotiate=simulate(shop,data,{action:'negotiate'});const reduce=simulate(shop,data,{action:'reduce'});
+ const mix=simulate(shop,data,{action:'mix',pixDiscount:3,maxInstall:6});
  near(advance.end,base.end-advance.fee);near(negotiate.end,base.end);near(reduce.end-base.end,shop.expenses.reduce((a,e)=>a+e.operating*.1,0));
  near(advance.daily[0].balance-base.daily[0].balance,advance.advanced-advance.fee);
  assert(simulate(shop,data,{shock:-40}).end<=base.end);
  const max=simulate(shop,data,{action:'advance',advance:1e6});near(max.advanced,shop.receivables.slice(1).reduce((a,b)=>a+b,0));
- for(const scenario of [base,advance,negotiate,reduce]){let previous=shop.balance;for(const d of scenario.daily){near(d.balance,previous+d.existing+d.newSales-d.expense);assert(Number.isFinite(d.balance));previous=d.balance;}}
- const f=financialSnapshot(shop,shop.balance,20);near(f.ncg,shop.finance.stock+shop.receivables.reduce((a,b)=>a+b,0)+(shop.receivablesBeyondWindow??0)+shop.finance.otherReceivables-shop.finance.operatingLiabilities);near(f.st,shop.balance-shop.finance.financialDebt);near(f.incremental,Math.max(0,f.ncg)*.2);assert(evaluateActions(shop,data).length===4);
+ // Ajustar o mix: custo = desconto no Pix (≥0); sem desconto e com o mesmo parcelamento não muda nada
+ assert(mix.fee>=0&&Number.isFinite(mix.end));
+ near(simulate(shop,data,{action:'mix',pixDiscount:0,maxInstall:3}).end,base.end);
+ assert(simulate(shop,data,{action:'mix',pixDiscount:6,maxInstall:3}).fee>0,'desconto no Pix deveria ter custo');
+ for(const scenario of [base,advance,negotiate,reduce,mix]){let previous=shop.balance;for(const d of scenario.daily){near(d.balance,previous+d.existing+d.newSales-d.expense);assert(Number.isFinite(d.balance));previous=d.balance;}}
+ const f=financialSnapshot(shop,shop.balance,20);near(f.ncg,shop.finance.stock+shop.receivables.reduce((a,b)=>a+b,0)+(shop.receivablesBeyondWindow??0)+shop.finance.otherReceivables-shop.finance.operatingLiabilities);near(f.st,shop.balance-shop.finance.financialDebt);near(f.incremental,Math.max(0,f.ncg)*.2);assert(evaluateActions(shop,data).length===5);
  if(shop.coldStart){assert(shop.history.length===14);assert(shop.metrics===null);assert(shop.peerCount===18);}
  // Diagnóstico timing vs margem (Tarefa 3)
  assert(['margem','timing','saudavel'].includes(diagnose(shop,data)),'diagnose inválido');
