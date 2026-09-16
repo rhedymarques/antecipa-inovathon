@@ -54,4 +54,45 @@ function diagnose(shop,data,options={}) {
 function evaluateActions(shop,data,options={}){
  return ['none','negotiate','reduce','advance','mix'].map(action=>{const r=simulate(shop,data,{...options,action});return {action,min:r.min,end:r.end,fee:r.fee,firstNegative:r.firstNegative,negativeDays:r.daily.filter(d=>d.balance<0).length};});
 }
-if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions,diagnose};
+const LABELS={none:'Não fazer nada',negotiate:'Negociar com o fornecedor',reduce:'Reduzir gastos variáveis',advance:'Antecipar recebíveis',mix:'Ajustar o mix de venda'};
+const brl=v=>'R$ '+Math.round(v).toLocaleString('pt-BR');
+const dia=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace(/\.$/,'');
+// O motor não só lista: escolhe UMA alternativa. Cobre o buraco com 20% de margem, pelo menor custo,
+// e nunca recomenda pagar mais que o próprio buraco. Em margem, nunca antecipação/crédito.
+function recommend(shop,data,options={}){
+ const H=[30,60].includes(+options.horizon)?+options.horizon:60;
+ const base=simulate(shop,data,{...options,action:'none'});
+ const minH=r=>Math.min(...r.daily.slice(0,H).map(d=>d.balance));
+ const baseMin=minH(base),buraco=Math.max(0,-baseMin),alvo=0.2*buraco;   // margem de segurança de 20%
+ const hz=shop.uncertainty&&shop.uncertainty.horizons?shop.uncertainty.horizons[String(H)]:null;
+ const mode=hz?hz.diagnosis:diagnose(shop,data,options);
+ const probNeg=hz?hz.probNegative:(buraco>0?1:0);
+ const k=Math.min(29,H-1);
+ const pack=(action,params,r,cost,extra={})=>({action,label:LABELS[action],params,cost:Math.round(cost),buraco:Math.round(buraco),
+  coversAmount:Math.round(minH(r)-baseMin),coveragePct:buraco>0?Math.round(100*(minH(r)-baseMin)/buraco):100,
+  saldo30Impacto:Math.round(r.daily[k].balance-base.daily[k].balance),altMin:Math.round(minH(r)),mode,probNegative:probNeg,horizon:H,...extra});
+ // 1. saudável ou risco baixo (<20%): não fazer nada
+ if(mode==='saudavel'||probNeg<0.20)
+  return pack('none',{},base,0,{justificativa:`O risco de faltar caixa nos próximos ${H} dias é baixo (${Math.round(probNeg*100)}%). Não é preciso agir agora — o sistema segue acompanhando e reavalia se o cenário mudar.`});
+ // 2. margem: nunca antecipação/crédito; alavanca operacional
+ if(mode==='margem')
+  return pack('reduce',{},simulate(shop,data,{...options,action:'reduce'}),0,{structural:true,
+   justificativa:`O problema é de margem: no período as saídas superam as entradas. Antecipar ou tomar crédito não resolve — só adia com custo, porque no período seguinte o buraco volta maior e sem recebível para vender. Comece cortando gastos e revendo preço e mix; sozinho isso ameniza, mas o ajuste é estrutural.`});
+ // 3/4. timing: menor custo que cobre com margem; custo nunca acima do buraco
+ const cand=[];
+ for(const action of ['negotiate','reduce'])cand.push({action,params:{},r:simulate(shop,data,{...options,action}),cost:0});
+ const maxRec=shop.receivables.reduce((a,b)=>a+b,0);
+ let adv=null;for(let amt=maxRec/40;amt<=maxRec+1;amt+=maxRec/40){const r=simulate(shop,data,{...options,action:'advance',advance:amt});if(minH(r)>=alvo-1){adv={action:'advance',params:{advance:Math.round(amt)},r,cost:r.fee};break;}}
+ cand.push(adv||(()=>{const r=simulate(shop,data,{...options,action:'advance',advance:maxRec});return{action:'advance',params:{advance:Math.round(maxRec)},r,cost:r.fee};})());
+ let mx=null;for(let d=0;d<=6.0001;d+=0.5){const r=simulate(shop,data,{...options,action:'mix',pixDiscount:d,maxInstall:3});if(minH(r)>=alvo-1){mx={action:'mix',params:{pixDiscount:d,maxInstall:3},r,cost:r.fee};break;}}
+ cand.push(mx||(()=>{const r=simulate(shop,data,{...options,action:'mix',pixDiscount:6,maxInstall:3});return{action:'mix',params:{pixDiscount:6,maxInstall:3},r,cost:r.fee};})());
+ const cobre=cand.filter(c=>minH(c.r)>=alvo-1&&c.cost<=buraco+1);
+ if(cobre.length){cobre.sort((a,b)=>a.cost-b.cost||minH(b.r)-minH(a.r));const c=cobre[0];
+  const p=c.action==='mix'?` (desconto de ${c.params.pixDiscount}% no Pix)`:c.action==='advance'?` (${brl(c.params.advance)})`:'';
+  return pack(c.action,c.params,c.r,c.cost,{justificativa:`Seu caixa aperta${base.firstNegative?` em ${dia(base.firstNegative)}`:''}, faltando ${brl(buraco)}. ${LABELS[c.action]}${p} cobre esse buraco pelo menor custo (${c.cost>0?brl(c.cost):'sem custo'}) e mantém o saldo no positivo.`});}
+ // 4. nada cobre sozinho: a mais barata que chega mais perto, dizendo que não fecha a conta
+ const pool=cand.filter(c=>c.cost<=buraco+1);(pool.length?pool:cand).sort((a,b)=>minH(b.r)-minH(a.r)||a.cost-b.cost);const c=(pool.length?pool:cand)[0];
+ const p=c.action==='mix'?` (desconto de ${c.params.pixDiscount}% no Pix)`:c.action==='advance'?` (${brl(c.params.advance)})`:'';
+ return pack(c.action,c.params,c.r,c.cost,{partial:true,justificativa:`Nenhuma alternativa sozinha cobre o buraco de ${brl(buraco)}. A mais barata que chega mais perto é ${LABELS[c.action].toLowerCase()}${p}; ela não fecha a conta sozinha — combine com revisão de custos e prazos.`});
+}
+if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions,diagnose,recommend};
