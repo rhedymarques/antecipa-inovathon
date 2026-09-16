@@ -1,0 +1,163 @@
+{
+  "data_referencia": "2026-09-15",
+  "semente": 42,
+  "dias_historico": 620,
+  "sintetico": true,
+  "choque": {
+    "inicio_dias_atras": 75,
+    "duracao": 32,
+    "intensidade": -0.09
+  },
+  "negocios": {
+    "bar": {
+      "nome": "Bar do Léo",
+      "setor": "Bar e restaurante",
+      "meses_operando": 20,
+      "ticket_medio": 52.0,
+      "saldo_inicial": 9800.0,
+      "mix": {
+        "pix": 0.34,
+        "debito": 0.28,
+        "credito_vista": 0.26,
+        "credito_4x": 0.12
+      },
+      "modalidades": {
+        "pix": {
+          "taxa": 0.0,
+          "prazo_dias": 0,
+          "parcelas": 1
+        },
+        "debito": {
+          "taxa": 0.012,
+          "prazo_dias": 1,
+          "parcelas": 1
+        },
+        "credito_vista": {
+          "taxa": 0.025,
+          "prazo_dias": 30,
+          "parcelas": 1
+        },
+        "credito_4x": {
+          "taxa": 0.035,
+          "prazo_dias": 30,
+          "parcelas": 4
+        }
+      },
+      "margem_bruta": 0.55,
+      "aperto_alvo": "timing",
+      "severidade_alvo": "leve",
+      "diagnostico_90d": {
+        "entra_90d": 353058.22,
+        "sai_90d": 257528.54,
+        "folga_90d": 95529.68,
+        "folga_pct": 27.1,
+        "pior_saldo": -962.97,
+        "dias_negativos": 1,
+        "peso_do_buraco": 0.008,
+        "modo_detectado": "timing",
+        "severidade": "leve"
+      },
+      "faturamento_medio_mensal": 125624.86
+    },
+    "vestuario": {
+      "nome": "Linha & Cor",
+      "setor": "Loja de roupas",
+      "meses_operando": 20,
+      "ticket_medio": 186.0,
+      "saldo_inicial": 7400.0,
+      "mix": {
+        "pix": 0.13,
+        "debito": 0.18,
+        "credito_vista": 0.22,
+        "credito_4x": 0.47
+      },
+      "modalidades": {
+        "pix": {
+          "taxa": 0.0,
+          "prazo_dias": 0,
+          "parcelas": 1
+        },
+        "debito": {
+          "taxa": 0.012,
+          "prazo_dias": 1,
+          "parcelas": 1
+        },
+        "credito_vista": {
+          "taxa": 0.025,
+          "prazo_dias": 30,
+          "parcelas": 1
+        },
+        "credito_4x": {
+          "taxa": 0.035,
+          "prazo_dias": 30,
+          "parcelas": 4
+        }
+      },
+      "margem_bruta": 0.52,
+      "aperto_alvo": "timing",
+      "severidade_alvo": "media",
+      "diagnostico_90d": {
+        "entra_90d": 353072.69,
+        "sai_90d": 298266.63,
+        "folga_90d": 54806.06,
+        "folga_pct": 15.5,
+        "pior_saldo": -19084.83,
+        "dias_negativos": 14,
+        "peso_do_buraco": 0.162,
+        "modo_detectado": "timing",
+        "severidade": "media"
+      },
+      "faturamento_medio_mensal": 115456.59
+    },
+    "mercadinho": {
+      "nome": "Mercado Bom Preço",
+      "setor": "Mercado de bairro",
+      "meses_operando": 20,
+      "ticket_medio": 34.0,
+      "saldo_inicial": 6100.0,
+      "mix": {
+        "pix": 0.42,
+        "debito": 0.34,
+        "credito_vista": 0.2,
+        "credito_4x": 0.04
+      },
+      "modalidades": {
+        "pix": {
+          "taxa": 0.0,
+          "prazo_dias": 0,
+          "parcelas": 1
+        },
+        "debito": {
+          "taxa": 0.012,
+          "prazo_dias": 1,
+          "parcelas": 1
+        },
+        "credito_vista": {
+          "taxa": 0.025,
+          "prazo_dias": 30,
+          "parcelas": 1
+        },
+        "credito_4x": {
+          "taxa": 0.035,
+          "prazo_dias": 30,
+          "parcelas": 4
+        }
+      },
+      "margem_bruta": 0.24,
+      "aperto_alvo": "margem",
+      "severidade_alvo": "media",
+      "diagnostico_90d": {
+        "entra_90d": 409860.96,
+        "sai_90d": 425737.41,
+        "folga_90d": -15876.45,
+        "folga_pct": -3.9,
+        "pior_saldo": -17388.23,
+        "dias_negativos": 69,
+        "peso_do_buraco": 0.127,
+        "modo_detectado": "margem",
+        "severidade": "media"
+      },
+      "faturamento_medio_mensal": 145301.91
+    }
+  }
+}
