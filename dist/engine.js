@@ -4,11 +4,23 @@ function simulate(shop,data,options={}) {
  const action=options.action??'none';
  const days=data.dates.length;
  const incoming=Array(days).fill(0), expenses=shop.expenses.map(e=>e.operating+e.supplier+e.fixed);
- shop.forecast.forEach((gross,i)=>shop.mix.forEach((share,m)=>{
-  const parts=m===3?3:1;
-  for(let p=0;p<parts;p++) { const due=i+shop.delays[m]+30*p; if(due<days) incoming[due]+=gross*(1+shock)*share*(1-shop.rates[m])/parts; }
+ // Alavanca "ajustar o mix de venda": um desconto no Pix migra crédito -> Pix por uma elasticidade
+ // declarada (6 p.p. de crédito por 1% de desconto) e o parcelamento máximo muda o número de parcelas
+ // do crédito parcelado, alterando o prazo de liquidação. Hipóteses; não modela efeito sobre volume.
+ let mix=shop.mix, maxInstall=3, pixDisc=0;
+ if(action==='mix') {
+  const d=Math.min(6,Math.max(0,Number(options.pixDiscount??0)));
+  pixDisc=d/100; maxInstall=[3,4,6,12].includes(+options.maxInstall)?+options.maxInstall:3;
+  const credit=shop.mix[2]+shop.mix[3], migr=Math.min(credit,0.06*d);
+  mix=[...shop.mix];
+  if(credit>0){mix[2]-=migr*shop.mix[2]/credit;mix[3]-=migr*shop.mix[3]/credit;mix[0]+=migr;}
+ }
+ shop.forecast.forEach((gross,i)=>mix.forEach((share,m)=>{
+  const parts=m===3?maxInstall:1, net=gross*(1+shock)*share*(1-shop.rates[m])*(m===0?1-pixDisc:1);
+  for(let p=0;p<parts;p++) { const due=i+shop.delays[m]+30*p; if(due<days) incoming[due]+=net/parts; }
  }));
  const receivables=[...shop.receivables]; let fee=0,advanced=0,shifted=0;
+ if(action==='mix') shop.forecast.forEach(gross=>fee+=gross*(1+shock)*mix[0]*pixDisc); // custo = desconto concedido no Pix
  if(action==='negotiate') {
   const i=shop.expenses.findIndex(e=>e.supplier>0);
   if(i>=0 && i+7<days){shifted=shop.expenses[i].supplier;expenses[i]-=shifted;expenses[i+7]+=shifted;}
@@ -40,6 +52,6 @@ function diagnose(shop,data,options={}) {
  return r.daily.some(x=>x.balance<0)?'timing':'saudavel';
 }
 function evaluateActions(shop,data,options={}){
- return ['none','negotiate','reduce','advance'].map(action=>{const r=simulate(shop,data,{...options,action});return {action,min:r.min,end:r.end,fee:r.fee,firstNegative:r.firstNegative,negativeDays:r.daily.filter(d=>d.balance<0).length};});
+ return ['none','negotiate','reduce','advance','mix'].map(action=>{const r=simulate(shop,data,{...options,action});return {action,min:r.min,end:r.end,fee:r.fee,firstNegative:r.firstNegative,negativeDays:r.daily.filter(d=>d.balance<0).length};});
 }
 if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions,diagnose};
