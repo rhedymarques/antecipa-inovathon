@@ -20,6 +20,7 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 - Cabeçalho azul, filtros arredondados e cartões claros inspirados na referência visual do app Cielo; as outras áreas seguem abstratas e não reproduzem telas oficiais.
 - Texto longo sobre número de cenários e método retirado da tela do gráfico. As premissas seguem documentadas no back-end.
 - `LEIA-ME.md` com instruções para execução local.
+- Revisão frente ao documento executivo: bloco "Por que este cenário?" explica o diagnóstico com a frequência disponível no JSON e a data de risco quando presente. A tela de cada alternativa agora compara o pior saldo antes/depois e apresenta um "Plano da sessão" com passos consultivos. Essa sequência cobre previsão, explicação, comparação e plano de ação no fluxo do protótipo.
 
 ## Arquivos do front
 
@@ -55,3 +56,6 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 - O diagnóstico de margem pode resultar em menos de três medidas recomendadas até que o back forneça alternativas adicionais adequadas.
 - Exatamente três recomendações por níveis de custo ainda não têm contrato no motor. A lista atual é dinâmica a partir de `evaluateActions()`, mas pode ter mais ou menos opções e não se apresenta como escada rígida de três níveis.
 - O filtro de custo e melhora da interface é provisório e determinístico. Substituir por elegibilidade e níveis de custo definidos no contrato do back-end; uma alternativa individual pode não cobrir todo o déficit.
+- Comparação das alternativas e "Plano da sessão" referem-se ao período de 60 dias calculado por `evaluateActions()`, inclusive quando o gráfico está em 30 dias. A interface indica esse período nos textos; alinhar ambos quando o contrato do motor aceitar horizonte nas alternativas.
+- O bloco de explicação usa o diagnóstico, sua frequência e a data do risco; ainda não há atribuição verificável dos fatores que causaram a previsão. Isso requer dados explicativos do motor, e a interface não deve atribuir causas específicas sem eles.
+- O plano é um roteiro visual, sem persistência ou execução. A consulta via chatbot, push real, oferta de crédito/CET e integração nativa com o app Cielo seguem como visão de produto do documento executivo.
