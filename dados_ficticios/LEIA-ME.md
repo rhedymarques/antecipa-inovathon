@@ -17,16 +17,16 @@ saber distinguir os casos antes de recomendar qualquer coisa.
 | Negócio | Setor | Modo de falha | O que isso significa |
 |---|---|---|---|
 | Bar do Léo | Bar e restaurante | Timing, leve | Sobra dinheiro no mês, mas um dia específico aperta |
-| Linha & Cor | Loja de roupas | Timing, média | É lucrativa e mesmo assim fica negativa quando a coleção vence |
+| Linha & Cor | Loja de roupas | Timing, severa | É lucrativa e mesmo assim fica negativa quando a coleção vence |
 | Mercado Bom Preço | Mercado de bairro | Margem | Gasta mais do que recebe — antecipar **não** resolve |
 
 Diagnóstico dos últimos 90 dias, calculado pelo próprio script:
 
 | Negócio | Entra | Sai | Folga | Pior saldo | Dias negativos |
 |---|---|---|---|---|---|
-| Bar do Léo | R$ 353.058 | R$ 257.529 | +27,1% | −R$ 963 | 1 |
-| Linha & Cor | R$ 353.073 | R$ 298.267 | +15,5% | −R$ 19.085 | 14 |
-| Mercado Bom Preço | R$ 409.861 | R$ 425.737 | −3,9% | −R$ 17.388 | 69 |
+| Bar do Léo | R$ 352.921 | R$ 257.283 | +27,1% | −R$ 712 | 1 |
+| Linha & Cor | R$ 355.284 | R$ 303.343 | +14,6% | −R$ 24.482 | 17 |
+| Mercado Bom Preço | R$ 409.093 | R$ 428.049 | −4,6% | −R$ 22.459 | 73 |
 
 **Por que essa diferença importa.** A loja de roupas tem folga de 15,5% e ainda assim
 fura o caixa: o problema é *quando* o dinheiro chega, não *quanto*. Já o mercadinho tem
@@ -94,6 +94,15 @@ saldo inicial e o diagnóstico de caixa acima.
 | Débito | 1,2% | D+1 | 1 |
 | Crédito à vista | 2,5% | D+30 | 1 |
 | Crédito parcelado | 3,5% | D+30, 60, 90, 120 | 4 |
+
+**Mix de pagamento variável.** A fatia de cada modalidade **não é fixa**: em cada
+dia ela é sorteada de uma distribuição de Dirichlet centrada no mix médio do
+negócio. A concentração muda por setor — clientela fixa (mercadinho) oscila
+menos, público heterogêneo (loja de roupas) oscila mais. O desvio-padrão diário
+observado fica entre 1 e 4 pontos percentuais por modalidade e está registrado em
+`perfil_dos_negocios.json`, campo `mix_desvio_observado`. Isso permite que a
+simulação de cenários calibre a incerteza do mix a partir do próprio histórico
+do negócio, em vez de usar um valor arbitrado.
 
 **Sazonalidade.** Cada setor tem um padrão semanal próprio (sexta e sábado fortes no bar,
 segunda e sábado no mercadinho, sábado na loja de roupas), um padrão mensal (alta até o

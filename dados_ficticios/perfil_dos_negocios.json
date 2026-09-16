@@ -21,6 +21,12 @@
         "credito_vista": 0.26,
         "credito_4x": 0.12
       },
+      "mix_desvio_observado": {
+        "pix": 0.0347,
+        "debito": 0.0306,
+        "credito_vista": 0.0306,
+        "credito_4x": 0.0239
+      },
       "modalidades": {
         "pix": {
           "taxa": 0.0,
@@ -47,13 +53,13 @@
       "aperto_alvo": "timing",
       "severidade_alvo": "leve",
       "diagnostico_90d": {
-        "entra_90d": 353058.22,
+        "entra_90d": 353166.33,
         "sai_90d": 257528.54,
-        "folga_90d": 95529.68,
+        "folga_90d": 95637.79,
         "folga_pct": 27.1,
-        "pior_saldo": -962.97,
+        "pior_saldo": -711.82,
         "dias_negativos": 1,
-        "peso_do_buraco": 0.008,
+        "peso_do_buraco": 0.006,
         "modo_detectado": "timing",
         "severidade": "leve"
       },
@@ -70,6 +76,12 @@
         "debito": 0.18,
         "credito_vista": 0.22,
         "credito_4x": 0.47
+      },
+      "mix_desvio_observado": {
+        "pix": 0.0289,
+        "debito": 0.0318,
+        "credito_vista": 0.0353,
+        "credito_4x": 0.0412
       },
       "modalidades": {
         "pix": {
@@ -95,19 +107,19 @@
       },
       "margem_bruta": 0.52,
       "aperto_alvo": "timing",
-      "severidade_alvo": "media",
+      "severidade_alvo": "severa",
       "diagnostico_90d": {
-        "entra_90d": 353072.69,
-        "sai_90d": 298266.63,
-        "folga_90d": 54806.06,
-        "folga_pct": 15.5,
-        "pior_saldo": -19084.83,
-        "dias_negativos": 14,
-        "peso_do_buraco": 0.162,
+        "entra_90d": 355986.85,
+        "sai_90d": 304045.97,
+        "folga_90d": 51940.88,
+        "folga_pct": 14.6,
+        "pior_saldo": -24481.66,
+        "dias_negativos": 17,
+        "peso_do_buraco": 0.206,
         "modo_detectado": "timing",
-        "severidade": "media"
+        "severidade": "severa"
       },
-      "faturamento_medio_mensal": 115456.59
+      "faturamento_medio_mensal": 117789.79
     },
     "mercadinho": {
       "nome": "Mercado Bom Preço",
@@ -120,6 +132,12 @@
         "debito": 0.34,
         "credito_vista": 0.2,
         "credito_4x": 0.04
+      },
+      "mix_desvio_observado": {
+        "pix": 0.0303,
+        "debito": 0.0287,
+        "credito_vista": 0.0249,
+        "credito_4x": 0.012
       },
       "modalidades": {
         "pix": {
@@ -147,17 +165,17 @@
       "aperto_alvo": "margem",
       "severidade_alvo": "media",
       "diagnostico_90d": {
-        "entra_90d": 409860.96,
-        "sai_90d": 425737.41,
-        "folga_90d": -15876.45,
-        "folga_pct": -3.9,
-        "pior_saldo": -17388.23,
-        "dias_negativos": 69,
-        "peso_do_buraco": 0.127,
+        "entra_90d": 408095.01,
+        "sai_90d": 427050.91,
+        "folga_90d": -18955.9,
+        "folga_pct": -4.6,
+        "pior_saldo": -22459.27,
+        "dias_negativos": 73,
+        "peso_do_buraco": 0.165,
         "modo_detectado": "margem",
         "severidade": "media"
       },
-      "faturamento_medio_mensal": 145301.91
+      "faturamento_medio_mensal": 145794.71
     }
   }
 }

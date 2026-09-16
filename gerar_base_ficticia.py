@@ -69,6 +69,7 @@ PERFIS = {
         "ruido": 0.15,
         "tendencia_anual": 0.02,       # cresce 2% ao ano
         "mix": [0.34, 0.28, 0.26, 0.12],
+        "mix_concentracao": 190,   # menor = mix do dia varia mais
         "margem_bruta": 0.55,
         "saldo_inicial": 9_800.0,
         "fornecedor_dias_semana": [1],          # terca
@@ -95,6 +96,7 @@ PERFIS = {
         "ruido": 0.22,
         "tendencia_anual": 0.11,       # em crescimento — e parte do problema
         "mix": [0.13, 0.18, 0.22, 0.47],   # quase metade parcelado em 4x
+        "mix_concentracao": 140,   # publico mais heterogeneo: mix oscila mais
         "margem_bruta": 0.52,
         "saldo_inicial": 7_400.0,
         "colecao_intervalo": 90,       # colecao sazonal: 2 compras grandes por ano
@@ -109,7 +111,7 @@ PERFIS = {
         "imposto_aliquota": 0.06,
         "operacional_diario": 0.09,
         "aperto_alvo": "timing",
-        "severidade_alvo": "media",
+        "severidade_alvo": "severa",
     },
     "mercadinho": {
         "nome": "Mercado Bom Preço",
@@ -123,6 +125,7 @@ PERFIS = {
         "ruido": 0.10,
         "tendencia_anual": 0.01,
         "mix": [0.42, 0.34, 0.20, 0.04],   # dinheiro entra quase todo rapido
+        "mix_concentracao": 260,   # clientela fixa: mix mais estavel
         "margem_bruta": 0.24,              # margem fina: aqui mora o problema
         "saldo_inicial": 6_100.0,
         "fornecedor_dias_semana": [0, 2, 4],    # seg, qua, sex
@@ -183,12 +186,24 @@ def gerar_vendas_diarias(perfil: dict, datas: list[date], rng) -> np.ndarray:
     return np.round(np.array(valores), 2)
 
 
+def gerar_mix_diario(perfil: dict, n_dias: int, rng) -> np.ndarray:
+    """Fatia de cada modalidade em CADA dia.
+
+    O mix nao e constante na vida real: num dia cai mais Pix, no outro mais
+    parcelado. Sorteamos de uma Dirichlet centrada no mix medio do negocio.
+    A concentracao controla o quanto oscila: clientela fixa oscila menos.
+    """
+    alpha = np.array(perfil["mix"]) * perfil["mix_concentracao"]
+    return rng.dirichlet(alpha, size=n_dias)
+
+
 def gerar_recebiveis(chave: str, perfil: dict, datas: list[date],
-                     vendas: np.ndarray) -> list[dict]:
+                     vendas: np.ndarray, mix_diario: np.ndarray) -> list[dict]:
     """Quebra cada dia de venda em parcelas com data de liquidacao e valor liquido."""
     linhas = []
     for i, dia in enumerate(datas):
-        for modalidade, fatia in zip(MODALIDADES, perfil["mix"]):
+        for j, modalidade in enumerate(MODALIDADES):
+            fatia = mix_diario[i][j]
             taxa, prazo, parcelas = MODALIDADES[modalidade]
             bruto = vendas[i] * fatia
             if bruto <= 0:
@@ -339,17 +354,18 @@ def main() -> None:
 
     for chave, perfil in PERFIS.items():
         vendas = gerar_vendas_diarias(perfil, datas, rng)
+        mix_diario = gerar_mix_diario(perfil, len(datas), rng)
 
         for i, dia in enumerate(datas):
-            for modalidade, fatia in zip(MODALIDADES, perfil["mix"]):
+            for j, modalidade in enumerate(MODALIDADES):
                 linhas_vendas.append({
                     "negocio": chave,
                     "data": dia.isoformat(),
                     "modalidade": modalidade,
-                    "valor_bruto": round(vendas[i] * fatia, 2),
+                    "valor_bruto": round(vendas[i] * mix_diario[i][j], 2),
                 })
 
-        receb = gerar_recebiveis(chave, perfil, datas, vendas)
+        receb = gerar_recebiveis(chave, perfil, datas, vendas, mix_diario)
         desp = gerar_despesas(chave, perfil, datas, vendas)
         linhas_receb += receb
         linhas_desp += desp
@@ -362,6 +378,8 @@ def main() -> None:
             "ticket_medio": perfil["ticket_medio"],
             "saldo_inicial": perfil["saldo_inicial"],
             "mix": dict(zip(MODALIDADES, perfil["mix"])),
+            "mix_desvio_observado": dict(zip(MODALIDADES,
+                                             np.round(mix_diario.std(axis=0), 4).tolist())),
             "modalidades": {m: {"taxa": t, "prazo_dias": p, "parcelas": n}
                             for m, (t, p, n) in MODALIDADES.items()},
             "margem_bruta": perfil["margem_bruta"],
