@@ -1,4 +1,4 @@
-const assert=require('assert');const fs=require('fs');const {simulate,financialSnapshot,evaluateActions,diagnose}=require('../dist/engine.js');const data=JSON.parse(fs.readFileSync('dist/data.json','utf8'));
+const assert=require('assert');const fs=require('fs');const {simulate,financialSnapshot,evaluateActions,diagnose,recommend}=require('../dist/engine.js');const data=JSON.parse(fs.readFileSync('dist/data.json','utf8'));
 const near=(a,b,tol=1e-5)=>assert(Math.abs(a-b)<tol,`${a} != ${b}`);
 const Q=['q2_5','q5','q25','q50','q75','q95','q97_5'];
 for(const shop of data.shops){
@@ -30,10 +30,46 @@ for(const shop of data.shops){
   assert(hz.firstNegativeDist.length===Number(H),'firstNegativeDist com tamanho errado');
   assert(hz.medianHole<=0&&hz.p95Hole<=hz.medianHole+1e-6,'buraco: p95 deve ser ≤ mediana ≤ 0');
  }
+ // recommend(): escolhe uma alternativa; antecipação recomendada nunca excede 1,5× o buraco
+ for(const H of [30,60]){const rec=recommend(shop,data,{horizon:H});
+  assert(['none','negotiate','reduce','advance','mix'].includes(rec.action));
+  if(rec.action==='advance'){
+   const hole=Math.max(0,-Math.min(...base.daily.slice(0,H).map(d=>d.balance)));
+   assert(rec.params.advance<=hole*1.5,`${shop.id}: antecipação recomendada excede 1,5× o buraco`);
+   const applied=simulate(shop,data,{action:rec.action,...rec.params});
+   assert(Math.min(...applied.daily.slice(0,H).map(d=>d.balance))>=hole*.2-1e-8);
+   assert(applied.fee<=hole);
+  }
+ }
  console.log(shop.name,JSON.stringify({minimum:Math.round(base.min),end:Math.round(base.end),mae:shop.metrics?.mae,baseline:shop.metrics?.baselineMae,diag60:shop.uncertainty.horizons['60'].diagnosis,probNeg60:shop.uncertainty.horizons['60'].probNegative}));
 }
 // Regras específicas do desafio: mercadinho é margem; antecipar não deve ser recomendado nele.
 const merc=data.shops.find(s=>s.id==='mercadinho');
 assert(diagnose(merc,data)==='margem','mercadinho deveria ser diagnosticado como margem');
 assert(merc.uncertainty.horizons['60'].diagnosis==='margem','mercadinho deveria mostrar margem em 60 dias');
-console.log('PASS: conservação de caixa, antecipação, renegociação, redução, choques, limites, diagnóstico e Monte Carlo (quantis, horizontes, probabilidades).');
+assert(recommend(merc,data,{horizon:60}).action==='reduce','margem não pode recomendar antecipação');
+assert(recommend(merc,data,{horizon:60}).justificativa.includes('o ajuste é estrutural'));
+// Caso que realmente exige antecipação: mínimo em centavos e reprodução do valor recomendado.
+const fixture={balance:0,mix:[1,0,0,0],rates:[0,0,0,0],delays:[0,1,30,30],
+ forecast:Array(60).fill(0),receivables:Array(60).fill(0),
+ expenses:Array.from({length:60},()=>({operating:0,supplier:0,fixed:0}))};
+fixture.expenses[0].fixed=100;fixture.receivables[10]=1000;
+// No teto (R$150), o custo cria outro aperto no fim; um valor menor cobre todos os dias.
+fixture.expenses[59].fixed=878.9;
+const rec=recommend(fixture,data,{horizon:60,advance:999999});
+assert(rec.action==='advance','o teste deve exercitar uma antecipação recomendada');
+near(rec.params.advance,121.01);
+const applied=simulate(fixture,data,{action:rec.action,...rec.params});
+assert(applied.min>=20&&rec.params.advance<=150);
+near(applied.end,simulate(fixture,data).end-applied.fee);
+assert(simulate(fixture,data,{action:'advance',advance:rec.params.advance-.01}).min<20,'um centavo a menos não deve cobrir a margem');
+assert(simulate(fixture,data,{action:'advance',advance:150}).min<20,'o teto pode piorar o saldo futuro');
+assert.deepStrictEqual(rec,recommend(fixture,data,{horizon:60,advance:0}),'recomendação deve independer do controle manual');
+// FIFO: recebíveis anteriores ao buraco não resolvem o déficit; não recomendar excesso nem antecipação parcial.
+const early=structuredClone(fixture);early.expenses.forEach(e=>e.fixed=0);
+early.receivables[1]=160;early.expenses[2].fixed=260;
+const blocked=recommend(early,data,{horizon:60});
+assert(blocked.action!=='advance'&&blocked.partial,'sem antecipação suficiente dentro do teto, explicitar cobertura parcial');
+assert(blocked.justificativa.includes('não fecha a conta sozinha'));
+assert(recommend(data.shops.find(s=>s.id==='vestuario'),data,{horizon:30}).action==='none');
+console.log('PASS: conservação de caixa, antecipação mínima, teto, reprodução, veto de margem, renegociação, redução, choques, diagnóstico e Monte Carlo.');

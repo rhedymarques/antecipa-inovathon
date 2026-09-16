@@ -81,9 +81,33 @@ function recommend(shop,data,options={}){
  // 3/4. timing: menor custo que cobre com margem; custo nunca acima do buraco
  const cand=[];
  for(const action of ['negotiate','reduce'])cand.push({action,params:{},r:simulate(shop,data,{...options,action}),cost:0});
- const maxRec=shop.receivables.reduce((a,b)=>a+b,0);
- let adv=null;for(let amt=maxRec/40;amt<=maxRec+1;amt+=maxRec/40){const r=simulate(shop,data,{...options,action:'advance',advance:amt});if(minH(r)>=alvo-1){adv={action:'advance',params:{advance:Math.round(amt)},r,cost:r.fee};break;}}
- cand.push(adv||(()=>{const r=simulate(shop,data,{...options,action:'advance',advance:maxRec});return{action:'advance',params:{advance:Math.round(maxRec)},r,cost:r.fee};})());
+ // menor antecipação que cobre o buraco, limitada a 1,5× o buraco: antecipar muito além do
+ // necessário esvazia o caixa dos meses seguintes, que é o que o desafio pede para evitar.
+ const capAdv=Math.floor(1.5*buraco*100)/100;
+ // Entre dois recebíveis consumidos, cada saldo diário varia linearmente com o principal.
+ // Intersectar os limites de TODOS os dias encontra o mínimo, mesmo quando antecipar mais
+ // piora um saldo posterior. Uma busca binária global não teria essa garantia.
+ let lo=0,left=base;
+ for(let i=1;i<data.dates.length&&lo<capAdv;i++){
+  const hi=Math.min(capAdv,lo+shop.receivables[i]);
+  if(hi<=lo)continue;
+  const right=simulate(shop,data,{...options,action:'advance',advance:hi});
+  let lower=lo,upper=hi;
+  for(let j=0;j<Math.min(H,base.daily.length);j++){
+   const balance=left.daily[j].balance,slope=(right.daily[j].balance-balance)/(hi-lo);
+   if(Math.abs(slope)<1e-12){if(balance<alvo-1e-8){upper=-1;break;}}
+   else if(slope>0)lower=Math.max(lower,lo+(alvo-balance)/slope);
+   else upper=Math.min(upper,lo+(alvo-balance)/slope);
+  }
+  const amount=Math.ceil((lower-1e-8)*100)/100;
+  if(amount<=upper+1e-8&&amount<=capAdv){
+   const r=simulate(shop,data,{...options,action:'advance',advance:amount});
+   if(minH(r)>=alvo-1e-8&&r.fee<=buraco){
+    cand.push({action:'advance',params:{advance:amount},r,cost:r.fee});break;
+   }
+  }
+  lo=hi;left=right;
+ }
  let mx=null;for(let d=0;d<=6.0001;d+=0.5){const r=simulate(shop,data,{...options,action:'mix',pixDiscount:d,maxInstall:3});if(minH(r)>=alvo-1){mx={action:'mix',params:{pixDiscount:d,maxInstall:3},r,cost:r.fee};break;}}
  cand.push(mx||(()=>{const r=simulate(shop,data,{...options,action:'mix',pixDiscount:6,maxInstall:3});return{action:'mix',params:{pixDiscount:6,maxInstall:3},r,cost:r.fee};})());
  const cobre=cand.filter(c=>minH(c.r)>=alvo-1&&c.cost<=buraco+1);

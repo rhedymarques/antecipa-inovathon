@@ -2,6 +2,17 @@
 
 Atualizado em **16/09/2026**. Este documento orienta colegas e assistentes de IA que vão continuar o projeto. Descreve o estado entregue e um backlog proposto; itens pendentes não estão implementados nem aprovados automaticamente como escopo da próxima tarefa.
 
+## Revisão de 16/09/2026 — antecipação recomendada
+
+- Concluída a alteração pendente em `dist/engine.js` e `work/test_engine.js`. A suíte estava interrompida por falta de importação de `recommend` no teste novo.
+- `recommend()` procura o menor principal em centavos que mantém todos os saldos do horizonte selecionado acima de 20% do buraco do cenário base, limitado a 1,5× esse buraco e com custo não superior ao buraco. Se não existir valor viável, a antecipação fica fora das candidatas, inclusive da recomendação parcial. O controle manual continua livre para exploração.
+- A busca considera os trechos lineares entre recebíveis consumidos, incluindo casos em que um valor maior piora o saldo futuro; não usa mais 40 passos aproximados nem arredonda um valor diferente daquele simulado.
+- A ordem do simulador foi preservada: primeiro são consumidos os recebíveis mais próximos. Isso explica por que um valor pequeno pode não melhorar o dia do déficit. O teto evita excesso, mas não implementa seleção de títulos por vencimento nem valida elegibilidade real.
+- Resultados reproduzidos com os dados sintéticos atuais e controles padrão, em 60 dias: Bar do Léo → mix com desconto Pix de 0,5%, custo simulado R$ 451 e cobertura de 141% do déficit base de R$ 502; Linha & Cor → mix de 4%, custo R$ 3.510 e cobertura de 120% do déficit base de R$ 25.904; Mercado Bom Preço → redução de gastos, cobertura parcial de 6% do déficit base de R$ 8.382, com texto explícito de ajuste estrutural. Risco de saldo negativo antes das ações nos cenários Monte Carlo: 92,3%, 100% e 100%, respectivamente. Esses custos e coberturas são resultados determinísticos das hipóteses, não garantias ou probabilidades de sucesso das ações.
+- Verificado no navegador local: aplicação das recomendações de mix nos dois negócios; exploração manual de R$ 10.000 de antecipação no bar sem mudar a recomendação; Linha & Cor sem ação em 30 dias e mix em 60; aviso estrutural e cobertura parcial no mercadinho. Nenhum erro registrado no console durante essas verificações.
+- Validação executada: `node work/test_engine.js`, `node --check` nos três scripts (`engine.js`, `app.js`, `features.js`) e `git diff --check`. Testes incluem antecipação efetivamente recomendada (R$ 121,01 para déficit sintético de R$ 100), insuficiência com um centavo a menos, piora futura no teto, conservação do caixa, independência do controle manual, limite de 1,5× e veto em margem.
+- Pendências: vídeo e documento descritivo. A “Tarefa 5” citada na conversa não tem escopo definido neste checkout; não foi presumida nem executada. Nenhum push ou publicação foi feito nesta revisão. O texto anterior deste handoff contém informações históricas (nomes dos negócios, métricas e visibilidade) que devem ser reconciliadas antes da entrega; não houve alteração de acesso. O checkout atual também inclui Café Primeiro Passo, mas não contém a pasta `prototipo/` citada no contexto.
+
 ## 1. Leia primeiro
 
 1. Leia este arquivo, `README.md`, `GUIA_DO_GRUPO.md` e `dist/alinhamento-proposta.md`.
