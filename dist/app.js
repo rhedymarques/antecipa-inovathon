@@ -19,7 +19,8 @@ function render(){
  document.querySelectorAll('[name=action]').forEach(el=>el.onchange=()=>{action=el.value;$('planStatus').textContent='';render();});
  $('advanceBox').hidden=action!=='advance';
  const details={none:'Selecione uma alternativa e compare o saldo. Nenhuma contratação ou transação é executada.',negotiate:`${money(result.shifted)} transferidos por 7 dias. Depende de aceite do fornecedor; hipótese sem multa. O pagamento continua no fluxo.`,reduce:'Hipótese: reduzir 10% dos gastos operacionais variáveis sem alterar vendas. Verifique se a economia é viável e se afeta a operação.',advance:`${money(result.advanced)} brutos antecipados; custo de ${money(result.fee)}. Taxa ilustrativa de 2,5% a cada 30 dias, proporcional ao prazo. Os recebíveis utilizados são retirados das datas originais.`};
- $('actionDetail').textContent=details[action];
+ const margemVeto=action==='advance'&&diagnose(shop,DATA,{...opts(),action:'none'})==='margem';
+ $('actionDetail').textContent=(margemVeto?'Não recomendado neste diagnóstico (margem): antecipar não resolve, só adia o aperto e cobra taxa. ':'')+details[action];
  $('plan').disabled=action==='none';$('plan').style.opacity=action==='none'?'.5':'1';
  $('insight').textContent=negative?`O cenário indica saldo abaixo de zero em ${day(negative.date)}. Compare entradas e despesas nessa data antes de escolher uma ação.`:`O cenário mantém saldo positivo nos ${h} dias exibidos. Acompanhe o fluxo: vendas futuras ainda são estimativas.`;
  draw(h);renderCopilot();renderDetail();

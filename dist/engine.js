@@ -31,7 +31,15 @@ function financialSnapshot(shop,opening,growth=0) {
  const ncg=f.stock+receivables-f.operatingLiabilities;
  return {pmr,cycle:f.pme+pmr-f.pmp,ncg,st:opening-f.financialDebt,receivables,incremental:Math.max(0,ncg)*growth/100};
 }
+// Classifica o problema antes de recomendar. Margem é estrutural (90 dias); timing e
+// saudável dependem de a curva de saldo do horizonte cruzar ou não o zero.
+function diagnose(shop,data,options={}) {
+ const d=shop.diagnosis;
+ if(d && d.entradas90-d.saidas90<=0) return 'margem';
+ const r=simulate(shop,data,{...options,action:'none'});
+ return r.daily.some(x=>x.balance<0)?'timing':'saudavel';
+}
 function evaluateActions(shop,data,options={}){
  return ['none','negotiate','reduce','advance'].map(action=>{const r=simulate(shop,data,{...options,action});return {action,min:r.min,end:r.end,fee:r.fee,firstNegative:r.firstNegative,negativeDays:r.daily.filter(d=>d.balance<0).length};});
 }
-if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions};
+if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions,diagnose};

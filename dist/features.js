@@ -27,15 +27,22 @@ function renderCopilot(){
  const first=base.daily.find(d=>d.balance<0),alternatives=evaluateActions(shop,DATA,opts());
  const operational=alternatives.filter(a=>['reduce','negotiate'].includes(a.action)&&a.min>base.min+.01).sort((a,b)=>b.min-a.min||b.end-a.end);
  const suggested=first&&operational.length?operational[0]:null;
+ const mode=diagnose(shop,DATA,opts()),margem=mode==='margem';
+ const modeName={margem:'MARGEM',timing:'TIMING',saudavel:'SAUDÁVEL'}[mode];
+ const modeExplain={
+  margem:'Diagnóstico de margem: em 90 dias as saídas superam as entradas. Antecipar recebíveis não resolve — só adianta um dinheiro que já é seu e ainda cobra taxa, empurrando o aperto para frente. Aqui o caminho é preço, mix de recebimento, custo ou volume, não crédito.',
+  timing:'Diagnóstico de timing: em 90 dias entra mais do que sai, mas o dinheiro chega depois das contas. Reorganizar prazos e recebimentos tende a ajudar.',
+  saudavel:'Diagnóstico saudável: sem descompasso projetado no horizonte simulado.'
+ }[mode];
  const title=first?`Seu caixa pede atenção em ${day(first.date)}.`:'Seu cenário mantém uma reserva positiva.';
  const reason=first?`Na data, saem ${money(first.expense)} e entram ${money(first.existing+first.newSales)}. O saldo acumulado chega a ${money(first.balance)}.`:'Continue acompanhando os compromissos e atualize os dados ao mudar sua operação.';
  const recommendation=suggested?`Vale avaliar: ${choices.find(c=>c[0]===suggested.action)[1].toLowerCase()}. É a alternativa operacional com maior melhora do menor saldo entre as hipóteses simuladas.`:'Revise compromissos e premissas com o lojista antes de assumir novas obrigações.';
  const u=shop.uncertainty,uncLine=`Em ${u.scenarios} cenários simulados, ${Math.round(u.probNegative*100)}% ficam negativos${u.firstNegativeDay?`, com aperto mais provável em ${day(u.firstNegativeDay)}`:''}${u.medianHole<0?` e buraco mediano de ${money(u.medianHole)}`:''}.`;
- $('copilot').innerHTML=`<div><p class="eyebrow">COPILOTO · ALERTA AUTOMÁTICO DO CENÁRIO</p><h2>${title}</h2><p>${reason} ${recommendation}</p><p>${uncLine}</p><p class="small">${shop.coldStart?'Pouco histórico: trate a projeção como ponto de partida. ':''}Faixa e percentuais vêm dos ${u.scenarios} cenários do modelo; a recomendação é calculada por regras sobre o fluxo. Não há monitoramento em segundo plano nem contratação automática.</p></div>${suggested?'<button id="trySuggestion">Simular alternativa sugerida</button>':''}`;
+ $('copilot').innerHTML=`<div><p class="eyebrow">COPILOTO · DIAGNÓSTICO: ${modeName}</p><h2>${title}</h2><p>${reason}${margem?'':' '+recommendation}</p><p>${modeExplain}</p><p>${uncLine}</p><p class="small">${shop.coldStart?'Pouco histórico: trate a projeção como ponto de partida. ':''}Faixa e percentuais vêm dos ${u.scenarios} cenários do modelo; o diagnóstico e a recomendação são calculados por regras sobre o fluxo. Não há monitoramento em segundo plano nem contratação automática.</p></div>${suggested?'<button id="trySuggestion">Simular alternativa sugerida</button>':''}`;
  if(suggested)$('trySuggestion').onclick=()=>{action=suggested.action;$('planStatus').textContent='';render();};
- $('comparisonRows').innerHTML=alternatives.map(a=>`<tr><td>${choices.find(c=>c[0]===a.action)[1]}</td><td class="${a.min<0?'negative':''}">${money(a.min)}</td><td>${a.negativeDays} dias</td><td>${money(a.fee)}</td><td>${money(a.end)}</td><td><button class="secondary compare" data-action="${a.action}" ${action===a.action?'disabled':''}>${action===a.action?'Em exibição':'Simular'}</button></td></tr>`).join('');
+ $('comparisonRows').innerHTML=alternatives.map(a=>{const veto=margem&&a.action==='advance';return `<tr><td>${choices.find(c=>c[0]===a.action)[1]}${veto?' <span class="tag-warn">não recomendado</span>':''}</td><td class="${a.min<0?'negative':''}">${money(a.min)}</td><td>${a.negativeDays} dias</td><td>${money(a.fee)}</td><td>${money(a.end)}</td><td><button class="secondary compare" data-action="${a.action}" ${action===a.action?'disabled':''}>${action===a.action?'Em exibição':'Simular'}</button></td></tr>`;}).join('');
  document.querySelectorAll('[data-action]').forEach(el=>el.onclick=()=>{action=el.dataset.action;$('planStatus').textContent='';render();});
- $('comparisonNote').textContent=alternatives.every(a=>a.min<0)?'Nenhuma alternativa isolada elimina todos os dias negativos neste cenário. Rever gastos, prazos e operação continua necessário. Antecipar só desloca entradas e gera custo.':'Compare também a viabilidade operacional. Uma hipótese favorável não garante o resultado real.';
+ $('comparisonNote').textContent=margem?'Modo margem: antecipar recebíveis não fecha a conta — só adia o problema e cobra taxa. Priorize preço, mix de recebimento, custo e volume antes de assumir crédito.':(alternatives.every(a=>a.min<0)?'Nenhuma alternativa isolada elimina todos os dias negativos neste cenário. Rever gastos, prazos e operação continua necessário. Antecipar só desloca entradas e gera custo.':'Compare também a viabilidade operacional. Uma hipótese favorável não garante o resultado real.');
 }
 function customDetail(){
  if(tab==='cash'&&coverage==='payments'){

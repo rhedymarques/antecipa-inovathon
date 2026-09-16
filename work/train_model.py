@@ -36,10 +36,10 @@ def ler_vendas_diarias():
    total[r['negocio']][r['data']] += float(r['valor_bruto'])
  return total
 
-def ler_recebiveis_futuros():
- """Recebiveis de vendas ja realizadas que caem nos proximos H dias."""
- janela = {(ASOF + timedelta(days=i)).isoformat(): i for i in range(H)}
- receb = {n: np.zeros(H) for n in perfis['negocios']}
+def ler_recebiveis(horizonte):
+ """Recebiveis de vendas ja realizadas que caem nos proximos `horizonte` dias."""
+ janela = {(ASOF + timedelta(days=i)).isoformat(): i for i in range(horizonte)}
+ receb = {n: np.zeros(horizonte) for n in perfis['negocios']}
  with (DADOS / 'agenda_de_recebiveis.csv').open(encoding='utf-8-sig', newline='') as fh:
   for r in csv.DictReader(fh):
    i = janela.get(r['data_liquidacao'])
@@ -48,7 +48,7 @@ def ler_recebiveis_futuros():
  return receb
 
 vendas = ler_vendas_diarias()
-receb_fut = ler_recebiveis_futuros()
+receb_fut = ler_recebiveis(H)     # 60 dias, exibidos e usados no fluxo
 
 # --- modelo: features, holdout, baseline e importancia ------------------------
 
@@ -59,18 +59,20 @@ def features(y, t):
 names = ['Dia da semana', 'Dia do mês', 'Mês', 'Tempo observado', 'Vendas de ontem',
          'Vendas há 7 dias', 'Média de 7 dias', 'Média de 28 dias', 'Variação de 28 dias']
 
-def despesas_futuras(chave, y, forecast):
- """Projeta 60 dias de saidas reaproveitando as regras do gerador (fonte unica)."""
- all_dates = dates + [ASOF + timedelta(days=i) for i in range(H)]
- all_sales = np.concatenate([y, forecast])
- buckets = {ds: {'operating': 0.0, 'supplier': 0.0, 'fixed': 0.0} for ds in future}
- mapa = {'operacional': 'operating', 'fornecedor': 'supplier', 'fornecedor_colecao': 'supplier',
-         'folha': 'fixed', 'aluguel': 'fixed', 'imposto': 'fixed'}
+MAPA_DESP = {'operacional': 'operating', 'fornecedor': 'supplier', 'fornecedor_colecao': 'supplier',
+             'folha': 'fixed', 'aluguel': 'fixed', 'imposto': 'fixed'}
+
+def projetar_despesas(chave, y, forecast_sales, horizonte):
+ """Projeta `horizonte` dias de saidas reaproveitando as regras do gerador (fonte unica)."""
+ all_dates = dates + [ASOF + timedelta(days=i) for i in range(horizonte)]
+ all_sales = np.concatenate([y, forecast_sales])
+ fut = [(ASOF + timedelta(days=i)).isoformat() for i in range(horizonte)]
+ buckets = {ds: {'operating': 0.0, 'supplier': 0.0, 'fixed': 0.0} for ds in fut}
  for d in base.gerar_despesas(chave, base.PERFIS[chave], all_dates, all_sales):
   if d['data'] in buckets:
-   buckets[d['data']][mapa[d['categoria']]] += d['valor']
+   buckets[d['data']][MAPA_DESP[d['categoria']]] += d['valor']
  return [{'date': ds, **{k: round(buckets[ds][k], 2) for k in ('operating', 'supplier', 'fixed')}}
-         for ds in future]
+         for ds in fut]
 
 shops = []
 resumo = {}
@@ -96,8 +98,12 @@ for chave, perfil in perfis['negocios'].items():
  mix = [perfil['mix'][m] for m in MODALIDADES]
  rates = [base.MODALIDADES[m][0] for m in MODALIDADES]
  delays = [base.MODALIDADES[m][1] for m in MODALIDADES]
- expenses = despesas_futuras(chave, y, forecast)
+ expenses = projetar_despesas(chave, y, forecast, H)
  expenses_total = np.array([e['operating'] + e['supplier'] + e['fixed'] for e in expenses])
+ # diagnóstico timing vs margem: margem é estrutural, então usamos o perfil de caixa de 90 dias
+ # em regime do próprio gerador (entra/sai steady-state), não o repique pós-choque da previsão.
+ diag90 = perfil['diagnostico_90d']
+ diagnosis = {'entradas90': diag90['entra_90d'], 'saidas90': diag90['sai_90d']}
  uncertainty = montecarlo.banda_incerteza(
   forecast, actual - testpred, mix, rates, delays, receb_fut[chave], expenses_total,
   perfil['saldo_inicial'], future, mc)
@@ -108,7 +114,7 @@ for chave, perfil in perfis['negocios'].items():
                'mix': mix, 'rates': rates, 'delays': delays,
                'history': [{'date': dates[i].isoformat(), 'sales': float(y[i])} for i in range(N - 90, N)],
                'forecast': forecast.tolist(), 'receivables': receb_fut[chave].round(2).tolist(),
-               'expenses': expenses, 'metrics': metrics, 'uncertainty': uncertainty,
+               'expenses': expenses, 'metrics': metrics, 'uncertainty': uncertainty, 'diagnosis': diagnosis,
                'importance': sorted([{'name': n, 'value': round(float(v), 4)} for n, v in zip(names, model.feature_importances_)], key=lambda a: -a['value'])})
  resumo[chave] = metrics
 
@@ -133,6 +139,22 @@ for chave, perfil in perfis['negocios'].items():
  m = resumo[chave]
  venceu = 'OK  floresta vence' if m['mae'] < m['baselineMae'] else '!!  floresta NAO vence'
  print(f"  {perfil['nome']:<20} floresta {m['mae']:>8.2f}   baseline {m['baselineMae']:>8.2f}   [{venceu}]")
+
+print('\nDiagnóstico timing vs margem (mesma regra do engine.js):')
+for s in shops:
+ d = s['diagnosis']; ent, sai = d['entradas90'], d['saidas90']
+ inc = [0.0] * H
+ for i, g in enumerate(s['forecast']):
+  for mi, share in enumerate(s['mix']):
+   for p in range(3 if mi == 3 else 1):
+    due = i + s['delays'][mi] + 30 * p
+    if due < H: inc[due] += g * share * (1 - s['rates'][mi]) / (3 if mi == 3 else 1)
+ bal, cruza = s['balance'], False
+ for i in range(H):
+  bal += s['receivables'][i] + inc[i] - sum(s['expenses'][i][k] for k in ('operating', 'supplier', 'fixed'))
+  cruza = cruza or bal < 0
+ modo = 'MARGEM' if ent - sai <= 0 else ('TIMING' if cruza else 'SAUDÁVEL')
+ print(f"  {s['name']:<20} entradas-saidas 90d R$ {ent - sai:>12,.0f}   modo: {modo}")
 
 import runpy
 runpy.run_path(str(ROOT / 'work/enrich_model.py'))

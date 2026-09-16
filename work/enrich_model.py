@@ -40,7 +40,12 @@ exp_total=np.array([e['operating']+e['supplier']+e['fixed'] for e in expenses])
 resid=rng.normal(0,0.18*float(np.mean(forecast)),400)  # sem holdout: dispersão ~18% dos pares sintéticos
 unc=montecarlo.banda_incerteza(forecast,resid,mix,rates,delays,receivables,exp_total,6500,data['dates'],rng)
 unc['method']='Início de operação: faixa maior, resíduos estimados pela dispersão dos negócios sintéticos de referência (~18%). Sem validação independente; trate como ponto de partida.'
-new={'id':'novo','name':'Café Primeiro Passo','sector':'Alimentação','age':1,'balance':6500,'mix':mix,'rates':rates,'delays':delays,'history':[{'date':d.isoformat(),'sales':round(float(v),2)} for d,v in zip(histdates,y)],'forecast':forecast.round(2).tolist(),'receivables':receivables.round(2).tolist(),'expenses':expenses,'coldStart':True,'peerCount':18,'trainSamples':len(X),'historyDays':14,'metrics':None,'uncertainty':unc,'importance':[{'name':n,'value':round(float(v),4)} for n,v in zip(['Dia da semana','Dia do mês','Mês','Média de 7 dias','Média de 14 dias','Variação de 14 dias'],model.feature_importances_)]}
+# diagnóstico timing vs margem em 90 dias: valor líquido da produção prevista vs despesas (previsão estendida plana)
+fc90=np.concatenate([forecast,[float(np.mean(forecast))]*30])
+net_pg=sum(mix[m]*(1-rates[m]) for m in range(len(mix)))
+exp90=sum(260+(2800 if (asof+timedelta(days=i)).weekday()==4 else 0)+(3500 if (asof+timedelta(days=i)).day in [5,20] else 0) for i in range(90))
+diagnosis={'entradas90':round(float(np.sum(fc90))*net_pg,2),'saidas90':round(float(exp90),2)}
+new={'id':'novo','name':'Café Primeiro Passo','sector':'Alimentação','age':1,'balance':6500,'mix':mix,'rates':rates,'delays':delays,'history':[{'date':d.isoformat(),'sales':round(float(v),2)} for d,v in zip(histdates,y)],'forecast':forecast.round(2).tolist(),'receivables':receivables.round(2).tolist(),'expenses':expenses,'coldStart':True,'peerCount':18,'trainSamples':len(X),'historyDays':14,'metrics':None,'uncertainty':unc,'diagnosis':diagnosis,'importance':[{'name':n,'value':round(float(v),4)} for n,v in zip(['Dia da semana','Dia do mês','Mês','Média de 7 dias','Média de 14 dias','Variação de 14 dias'],model.feature_importances_)]}
 data['shops'].append(new)
 for s,stock,pme,pmp,liabilities,debts in zip(data['shops'],[6500,22000,4000,3000],[8,35,5,7],[14,21,20,14],[13000,26000,9000,5500],[1200,4500,1000,0]):
  beyond=0
