@@ -104,10 +104,13 @@ for chave, perfil in perfis['negocios'].items():
  # em regime do próprio gerador (entra/sai steady-state), não o repique pós-choque da previsão.
  diag90 = perfil['diagnostico_90d']
  diagnosis = {'entradas90': diag90['entra_90d'], 'saidas90': diag90['sai_90d']}
- # dispersão do mix calibrada pela volatilidade de vendas do negócio (o mix diário do histórico
- # sintético é constante, então usamos o CV das vendas como referência de variação observada).
- cv = float(np.std(y) / np.mean(y))
- concentracao = max(2.0, 3.0 / cv ** 2 - 1.0)
+ # dispersão do mix calibrada pelo desvio-padrão diário observado do mix do próprio negócio
+ # (campo mix_desvio_observado, agora que o gerador varia o mix dia a dia; antes usávamos o CV
+ # de vendas como stand-in porque o mix era constante). Para Dirichlet(s·p) vale
+ # Var(pᵢ)=pᵢ(1−pᵢ)/(s+1); logo s = mediana_i[ pᵢ(1−pᵢ)/σᵢ² − 1 ].
+ mix_std = [perfil['mix_desvio_observado'][m] for m in MODALIDADES]
+ estimativas = [mix[i] * (1 - mix[i]) / mix_std[i] ** 2 - 1 for i in range(len(mix)) if mix_std[i] > 0]
+ concentracao = max(2.0, float(np.median(estimativas)))
  uncertainty = montecarlo.simular_cenarios(
   forecast, actual - testpred, mix, concentracao, rates, delays, receb_fut[chave], expenses_total,
   perfil['saldo_inicial'], future, diagnosis['entradas90'], diagnosis['saidas90'], mc)
