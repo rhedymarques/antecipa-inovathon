@@ -6,8 +6,15 @@ function changeShop(id){shop=DATA.shops.find(s=>s.id===id);$('shop').value=id;$(
 function render(){
  $('profile').textContent=shop.sector+' · '+shop.age+' meses de operação';$('shockValue').textContent=$('shock').value+'%';
  base=simulate(shop,DATA,{...opts(),action:'none'});result=simulate(shop,DATA,opts());
- const h=Number($('horizon').value), visible=result.daily.slice(0,h),min=Math.min(...visible.map(d=>d.balance)),negative=visible.find(d=>d.balance<0),delta=result.end-base.end;
- $('metrics').innerHTML=[['Menor saldo em '+h+' dias',money(min),negative?'Atenção ao período abaixo de zero':'Saldo projetado positivo',min<0],['Primeiro aperto',negative?day(negative.date):'Sem falta', 'No cenário selecionado',!!negative],['Saldo ao final de 60 dias',money(result.end),'Efeito completo da simulação',result.end<0],['Diferença em 60 dias',money(delta),action==='none'?'Escolha uma alternativa para comparar':'Em relação ao cenário atual',false]].map(([l,v,s,w])=>`<article class="metric ${w?'warn':''}"><span class="label">${l}</span><strong>${v}</strong><small>${s}</small></article>`).join('');
+ const h=Number($('horizon').value), visible=result.daily.slice(0,h),negative=visible.find(d=>d.balance<0),delta=result.end-base.end;
+ const u=shop.uncertainty,off=Number($('balance').value)-shop.balance;
+ const minLo=Math.min(...u.p10.slice(0,h))+off,minHi=Math.min(...u.p90.slice(0,h))+off,prob=Math.round(u.probNegative*100);
+ $('metrics').innerHTML=[
+  ['Menor saldo provável ('+h+' dias)',money(minLo)+' a '+money(minHi),'Faixa p10–p90 · '+u.scenarios+' cenários do modelo',minLo<0],
+  ['Chance de faltar caixa',prob+'%',u.firstNegativeDay?'Aperto mais provável em '+day(u.firstNegativeDay)+' (60 dias)':'Nenhum cenário fica negativo',u.probNegative>=0.5],
+  ['Buraco típico se faltar',u.medianHole<0?money(u.medianHole):'Sem buraco',u.medianHole<0?'Mediana do pior saldo nos cenários negativos':'Saldo positivo em todos os cenários',u.medianHole<0],
+  ['Efeito da ação escolhida',action==='none'?'—':money(delta),action==='none'?'Escolha uma alternativa para comparar':'Sobre o saldo final, cenário central',false]
+ ].map(([l,v,s,w])=>`<article class="metric ${w?'warn':''}"><span class="label">${l}</span><strong class="${v.length>13?'text-value':''}">${v}</strong><small>${s}</small></article>`).join('');
  $('actions').innerHTML=choices.map(([id,title,sub])=>`<label class="choice"><input type="radio" name="action" value="${id}" ${action===id?'checked':''}>${title}<small>${sub}</small></label>`).join('');
  document.querySelectorAll('[name=action]').forEach(el=>el.onchange=()=>{action=el.value;$('planStatus').textContent='';render();});
  $('advanceBox').hidden=action!=='advance';
@@ -19,16 +26,21 @@ function render(){
 }
 function draw(h){
  const a=base.daily.slice(0,h),b=result.daily.slice(0,h),W=850,H=290,L=72,R=18,T=20,B=38;
- const values=[0,...a.map(d=>d.balance),...b.map(d=>d.balance)],lo=Math.min(...values),hi=Math.max(...values),pad=Math.max(1000,(hi-lo)*.12),mn=lo-pad,mx=hi+pad;
+ const u=shop.uncertainty,off=Number($('balance').value)-shop.balance;
+ const p10=u.p10.slice(0,h).map(v=>v+off),p50=u.p50.slice(0,h).map(v=>v+off),p90=u.p90.slice(0,h).map(v=>v+off);
+ const values=[0,...a.map(d=>d.balance),...b.map(d=>d.balance),...p10,...p90],lo=Math.min(...values),hi=Math.max(...values),pad=Math.max(1000,(hi-lo)*.12),mn=lo-pad,mx=hi+pad;
  const x=i=>L+i*(W-L-R)/(h-1),y=v=>T+(mx-v)/(mx-mn)*(H-T-B);
- let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><title>Saldo diário projetado. Atual e simulação.</title>`;
+ let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><title>Saldo diário projetado com faixa de incerteza (p10–p90), cenário atual e simulação.</title>`;
  if(lo<0)svg+=`<rect x="${L}" y="${y(0)}" width="${W-L-R}" height="${H-B-y(0)}" fill="#fff4eb"/>`;
  for(let i=0;i<5;i++){const v=mn+(mx-mn)*i/4;svg+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#e4edf1"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="#617989">${(v/1000).toFixed(1)} mil</text>`;}
  svg+=`<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="#b58961" stroke-dasharray="4 4"/>`;
+ const top=p90.map((v,i)=>x(i)+','+y(v)),bot=p10.map((v,i)=>x(i)+','+y(v)).reverse();
+ svg+=`<polygon points="${top.concat(bot).join(' ')}" fill="#029b87" fill-opacity="0.13"/>`;
+ svg+=`<polyline points="${p50.map((v,i)=>x(i)+','+y(v)).join(' ')}" fill="none" stroke="#029b87" stroke-width="1.5" stroke-dasharray="2 3" stroke-opacity=".65"/>`;
  for(const [arr,color,width,dash] of [[a,'#8095a3',2,'5 4'],[b,'#029b87',3,'']])svg+=`<polyline points="${arr.map((d,i)=>x(i)+','+y(d.balance)).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="${dash}" stroke-linejoin="round"/>`;
  for(const i of [0,Math.floor(h/3),Math.floor(2*h/3),h-1])svg+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="12" fill="#617989">${day(a[i].date)}</text>`;
  $('chart').innerHTML=svg+'</svg>';
- $('chart').setAttribute('aria-label',`Gráfico de ${h} dias. Menor saldo da simulação: ${money(Math.min(...b.map(d=>d.balance)))}. Valores diários disponíveis na tabela abaixo.`);
+ $('chart').setAttribute('aria-label',`Gráfico de ${h} dias com faixa provável do saldo. No pior dia, a faixa vai de ${money(Math.min(...p10))} a ${money(Math.min(...p90))}. Valores diários na tabela abaixo.`);
 }
 function renderDetail(){
  document.querySelectorAll('[data-tab]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.tab===tab)));

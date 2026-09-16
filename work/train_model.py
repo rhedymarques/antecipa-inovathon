@@ -14,7 +14,9 @@ from sklearn.metrics import mean_absolute_error
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gerar_base_ficticia as base  # fonte unica das regras de despesa/modalidade
+import montecarlo                    # faixa de incerteza da curva de saldo
 
 DADOS = ROOT / 'dados_ficticios'
 perfis = json.loads((DADOS / 'perfil_dos_negocios.json').read_text(encoding='utf-8'))
@@ -72,6 +74,7 @@ def despesas_futuras(chave, y, forecast):
 
 shops = []
 resumo = {}
+mc = np.random.default_rng(base.SEMENTE)     # rng dedicado ao Monte Carlo, reprodutível
 for chave, perfil in perfis['negocios'].items():
  y = np.array([round(vendas[chave][d.isoformat()], 2) for d in dates])
  X = np.array([features(y, t) for t in range(28, N - H + 1)])
@@ -93,12 +96,19 @@ for chave, perfil in perfis['negocios'].items():
  mix = [perfil['mix'][m] for m in MODALIDADES]
  rates = [base.MODALIDADES[m][0] for m in MODALIDADES]
  delays = [base.MODALIDADES[m][1] for m in MODALIDADES]
+ expenses = despesas_futuras(chave, y, forecast)
+ expenses_total = np.array([e['operating'] + e['supplier'] + e['fixed'] for e in expenses])
+ uncertainty = montecarlo.banda_incerteza(
+  forecast, actual - testpred, mix, rates, delays, receb_fut[chave], expenses_total,
+  perfil['saldo_inicial'], future, mc)
+ uncertainty['method'] = ('2000 cenários por reamostragem dos resíduos do teste reservado de 60 dias; '
+                          'despesas fixas no cenário central. Faixa da previsão, não probabilidade de falência.')
  shops.append({'id': chave, 'name': perfil['nome'], 'sector': perfil['setor'],
                'age': perfil['meses_operando'], 'balance': perfil['saldo_inicial'],
                'mix': mix, 'rates': rates, 'delays': delays,
                'history': [{'date': dates[i].isoformat(), 'sales': float(y[i])} for i in range(N - 90, N)],
                'forecast': forecast.tolist(), 'receivables': receb_fut[chave].round(2).tolist(),
-               'expenses': despesas_futuras(chave, y, forecast), 'metrics': metrics,
+               'expenses': expenses, 'metrics': metrics, 'uncertainty': uncertainty,
                'importance': sorted([{'name': n, 'value': round(float(v), 4)} for n, v in zip(names, model.feature_importances_)], key=lambda a: -a['value'])})
  resumo[chave] = metrics
 

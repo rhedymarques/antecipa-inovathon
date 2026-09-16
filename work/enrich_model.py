@@ -1,10 +1,12 @@
 """Add a cold-start model and declared accounting snapshots to the demo."""
 from pathlib import Path
 from datetime import date,timedelta
-import json
+import json,sys
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import montecarlo
 path=ROOT/'dist/data.json'
 data=json.loads(path.read_text(encoding='utf-8'))
 data['shops']=[s for s in data['shops'] if s['id']!='novo']
@@ -34,7 +36,11 @@ expenses=[]
 for ds in data['dates']:
  d=date.fromisoformat(ds)
  expenses.append({'date':ds,'operating':260,'supplier':2800 if d.weekday()==4 else 0,'fixed':3500 if d.day in [5,20] else 0})
-new={'id':'novo','name':'Café Primeiro Passo','sector':'Alimentação','age':1,'balance':6500,'mix':mix,'rates':rates,'delays':delays,'history':[{'date':d.isoformat(),'sales':round(float(v),2)} for d,v in zip(histdates,y)],'forecast':forecast.round(2).tolist(),'receivables':receivables.round(2).tolist(),'expenses':expenses,'coldStart':True,'peerCount':18,'trainSamples':len(X),'historyDays':14,'metrics':None,'importance':[{'name':n,'value':round(float(v),4)} for n,v in zip(['Dia da semana','Dia do mês','Mês','Média de 7 dias','Média de 14 dias','Variação de 14 dias'],model.feature_importances_)]}
+exp_total=np.array([e['operating']+e['supplier']+e['fixed'] for e in expenses])
+resid=rng.normal(0,0.18*float(np.mean(forecast)),400)  # sem holdout: dispersão ~18% dos pares sintéticos
+unc=montecarlo.banda_incerteza(forecast,resid,mix,rates,delays,receivables,exp_total,6500,data['dates'],rng)
+unc['method']='Início de operação: faixa maior, resíduos estimados pela dispersão dos negócios sintéticos de referência (~18%). Sem validação independente; trate como ponto de partida.'
+new={'id':'novo','name':'Café Primeiro Passo','sector':'Alimentação','age':1,'balance':6500,'mix':mix,'rates':rates,'delays':delays,'history':[{'date':d.isoformat(),'sales':round(float(v),2)} for d,v in zip(histdates,y)],'forecast':forecast.round(2).tolist(),'receivables':receivables.round(2).tolist(),'expenses':expenses,'coldStart':True,'peerCount':18,'trainSamples':len(X),'historyDays':14,'metrics':None,'uncertainty':unc,'importance':[{'name':n,'value':round(float(v),4)} for n,v in zip(['Dia da semana','Dia do mês','Mês','Média de 7 dias','Média de 14 dias','Variação de 14 dias'],model.feature_importances_)]}
 data['shops'].append(new)
 for s,stock,pme,pmp,liabilities,debts in zip(data['shops'],[6500,22000,4000,3000],[8,35,5,7],[14,21,20,14],[13000,26000,9000,5500],[1200,4500,1000,0]):
  beyond=0
