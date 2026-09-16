@@ -2,6 +2,12 @@
 
 Atualizado em **16/09/2026**. Este registro pertence apenas à interface em `prototipo/`; o handoff da raiz é mantido pelo trabalho geral e pelo back-end.
 
+## Decisão de integração à `main`
+
+Esta versão do front pode entrar na `main` para que a equipe use e revise a jornada móvel. **A simulação de desconto no Pix e de parcelamento máximo ainda não está funcional no motor financeiro atual.** Os controles chamam `evaluateActions()` a cada ajuste, mas o `dist/engine.js` desta versão ignora esses parâmetros; portanto, mover os controles não altera os valores calculados. A página avisa isso explicitamente. Não apresentar esses controles no pitch como cálculo financeiro já implementado.
+
+Para encerrar essa pendência, alinhar os nomes e unidades dos parâmetros com o back-end, verificar que cada ajuste altera os resultados esperados, conferir os custos do desconto e os recebimentos futuros e testar o fluxo no navegador. As bandas probabilísticas permanecem do cenário base até que o back-end ofereça novos quantis para cada cenário.
+
 ## Escopo entregue
 
 - Nova aba Antecipa em uma moldura de celular, com áreas existentes do app representadas abstratamente.
