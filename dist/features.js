@@ -48,6 +48,12 @@ function renderCopilot(){
  $('comparisonRows').innerHTML=ordered.map(a=>{const veto=margem&&a.action==='advance';return `<tr><td>${choices.find(c=>c[0]===a.action)[1]}${veto?' <span class="tag-warn">não recomendado</span>':''}</td><td class="${a.min<0?'negative':''}">${money(a.min)}</td><td>${a.negativeDays} dias</td><td>${money(a.fee)}</td><td>${money(a.end)}</td><td><button class="secondary compare" data-action="${a.action}" ${action===a.action?'disabled':''}>${action===a.action?'Em exibição':'Simular'}</button></td></tr>`;}).join('');
  document.querySelectorAll('[data-action]').forEach(el=>el.onclick=()=>{action=el.dataset.action;$('planStatus').textContent='';render();});
  $('comparisonNote').textContent=margem?'Modo margem: antecipar recebíveis não fecha a conta — só adia o problema e cobra taxa. Priorize preço, mix de recebimento, custo e volume antes de assumir crédito.':(alternatives.every(a=>a.min<0)?'Nenhuma alternativa isolada elimina todos os dias negativos neste cenário. Rever gastos, prazos e operação continua necessário. Antecipar só desloca entradas e gera custo.':'Compare também a viabilidade operacional. Uma hipótese favorável não garante o resultado real.');
+ // Recomendação: o copiloto escolhe UMA alternativa (acima da tabela)
+ const rec=recommend(shop,DATA,{...opts(),horizon:H});
+ const pt=rec.action==='mix'?` — desconto de ${rec.params.pixDiscount}% no Pix, parcelamento ${rec.params.maxInstall}x`:rec.action==='advance'?` — ${money(rec.params.advance)}`:'';
+ const stats=rec.action==='none'?'':`<ul class="reco-stats"><li>Cobre ${rec.coveragePct}% do buraco${rec.buraco?' ('+money(rec.buraco)+')':''}</li><li>Custo: ${rec.cost>0?money(rec.cost):'sem custo'}</li><li>Impacto no saldo em 30 dias: ${money(rec.saldo30Impacto)}</li></ul>`;
+ $('recommendation').innerHTML=`<p class="eyebrow">O COPILOTO RECOMENDA</p><div class="reco-head"><strong>${rec.label}${pt}</strong>${rec.cost>0?`<span class="reco-cost">custo ${money(rec.cost)}</span>`:'<span class="reco-cost free">sem custo</span>'}</div><p>${rec.justificativa}</p>${stats}${rec.action==='none'?'':'<button id="applyReco">Simular esta recomendação</button>'}`;
+ if(rec.action!=='none')$('applyReco').onclick=()=>{if(rec.action==='mix'){$('pixDiscount').value=rec.params.pixDiscount;$('maxInstall').value=rec.params.maxInstall;}if(rec.action==='advance')$('advance').value=rec.params.advance;action=rec.action;$('planStatus').textContent='';render();};
 }
 function customDetail(){
  if(tab==='cash'&&coverage==='payments'){
