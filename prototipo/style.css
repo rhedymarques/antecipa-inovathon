@@ -16,3 +16,30 @@
 @media(max-width:1000px){.stage{gap:4vw}.stage-caption,.stage-side-note{display:none}}
 @media(max-width:480px){.stage{padding:0;background:#f7fafd}.phone{width:100%;height:100dvh;min-height:0;border:0;border-radius:0;box-shadow:none}.phone-top{height:20px;padding-top:2px}.app-header{height:58px}.notice{top:78px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Visual inspirado na estrutura de navegação enviada pela equipe: faixa azul,
+   filtros arredondados e cartões claros. Áreas existentes são apenas abstratas. */
+.stage{background:#eaf2f7}
+.phone{background:#f8fbfd;border-color:#123d67}
+.phone-top{background:#0876c8;color:#fff}
+.app-header{background:#0876c8;border-bottom:0;color:#fff;height:66px}
+.app-brand{color:#fff;font-size:23px;font-weight:650;letter-spacing:-.4px}
+.brand-demo{color:#fff;background:#ffffff2d;border:1px solid #ffffff65;font-weight:600;margin-left:6px}
+.icon-button{background:#ffffff24;color:#fff}
+.notification-dot{border-color:#0876c8}
+.product-tabs{background:#0876c8;border-bottom:0;padding:0 18px 17px;gap:7px}
+.product-tab{border:1px solid #ffffffa6;border-radius:30px;color:#fff;font-size:11px;padding:7px 11px;min-height:36px}
+.product-tab.active{background:#fff;border-color:#fff;color:#096aae}
+.page-intro{padding:22px 20px 17px}
+.page-intro h1{font-size:25px;letter-spacing:-.8px;margin:5px 0 6px}
+.chart{height:198px}
+.chart-card{border-color:#e3edf4}
+.chart-legend{margin-top:7px;color:#617b8e;font-size:11px}
+.legend-band{background:#d8eaf7}
+.notice{top:100px}
+.bottom-nav{box-shadow:0 -3px 12px #1745680d}
+.simulator-result{display:flex;gap:8px;margin-top:17px}
+.simulator-result>div{flex:1;background:#f0f7fb;border-radius:10px;padding:10px;min-width:0}
+.simulator-result span{display:block;color:#668195;font-size:10px}
+.simulator-result strong{display:block;color:#155278;font-size:14px;margin-top:3px}
+@media(max-width:480px){.app-header{height:60px}.notice{top:83px}}
