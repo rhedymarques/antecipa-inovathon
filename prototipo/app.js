@@ -87,9 +87,20 @@
   }
   function changeLabel(delta) {
     if (delta === null) return ['Mudança do pior saldo', 'Indisponível'];
-    if (delta < -0.01) return ['Piora do pior saldo', money(Math.abs(delta))];
+    if (delta <= 0.01) return ['Efeito no aperto', 'Não resolve neste caso'];
     if (delta > 0.01) return ['Melhora do pior saldo', money(delta)];
-    return ['Mudança do pior saldo', 'Sem mudança'];
+  }
+  function noHelpReason(action, context = {}) {
+    if (action === 'none') return 'Sem uma nova medida, o dia de aperto permanece.';
+    if (action === 'negotiate') return 'Mudar este vencimento não altera o pior dia do caixa.';
+    if (action === 'reduce') return 'O corte testado não é suficiente para afastar o aperto.';
+    if (action === 'advance') return shopDiagnosis() === 'margem'
+      ? 'Antecipar só muda a data do dinheiro e acrescenta custo.'
+      : 'Trazer estes recebíveis para hoje não melhora o pior dia; há uma taxa.';
+    if (action === 'mix') return finite(context.pixDiscount) === 0 && Number(context.maxInstall) === 3
+      ? 'Sem mudar desconto ou parcelas, o caixa continua igual.'
+      : 'A mudança testada não traz dinheiro suficiente antes do aperto.';
+    return 'Esta mudança não melhora o pior dia na simulação.';
   }
   function scrollTop() { $('appContent').scrollTo({ top: 0, behavior: 'smooth' }); }
 
@@ -175,14 +186,11 @@
     const h = currentHorizon(), diagnosis = shopDiagnosis();
     const content = $('explanationContent');
     if (!h || !diagnosis) { content.textContent = 'Ainda não há dados suficientes para explicar este cenário.'; return; }
-    const frequencies = h.diagnosisFreq || {};
-    const frequency = finite(frequencies[diagnosis]);
-    const frequencyText = frequency !== null ? `Esse foi o diagnóstico mais frequente (${pct(frequency)} dos cenários).` : '';
     const text = diagnosis === 'saudavel'
-      ? `A maior parte dos cenários termina o período com saldo positivo. ${h.firstNegativeDay === null ? (finite(h.probNegative) === 0 ? 'Nenhum dos cenários simulados mostrou saldo negativo neste horizonte.' : 'Não há uma data predominante para os cenários que ficam negativos.') : ''} ${frequencyText} Continue acompanhando entradas e saídas; a projeção pode mudar.`
+      ? `A previsão indica um período favorável. ${h.firstNegativeDay === null ? (finite(h.probNegative) === 0 ? 'Nenhum dia negativo apareceu nas simulações deste período.' : 'Não há uma data predominante para eventual aperto.') : ''} Continue acompanhando o caixa.`
       : diagnosis === 'timing'
-        ? `As datas das entradas e saídas podem não coincidir. ${h.firstNegativeDay ? `O primeiro aperto aparece com mais frequência em ${day(h.firstNegativeDay)}.` : ''} ${frequencyText} O alerta indica risco de liquidez, não uma despesa já vencida.`
-        : `O diagnóstico aponta desequilíbrio entre entradas e saídas ao longo do período. ${frequencyText} Adiantar um recebimento muda a data do dinheiro, mas não elimina uma despesa recorrente.`;
+        ? `Alguns pagamentos podem chegar antes do dinheiro das vendas. ${h.firstNegativeDay ? `O aperto aparece com mais frequência em ${day(h.firstNegativeDay)}.` : ''} Há tempo para comparar caminhos.`
+        : 'As saídas previstas podem superar as entradas ao longo do período. Adiantar dinheiro muda a data do recebimento, mas não reduz as despesas.';
     content.textContent = text;
     renderMethod();
   }
@@ -192,26 +200,37 @@
     const method = shop?.uncertainty?.method;
     const metrics = shop?.metrics;
     const importance = Array.isArray(shop?.importance) ? [...shop.importance].filter(item => finite(item?.value) !== null).sort((a, b) => b.value - a.value).slice(0, 3) : [];
+    const frequencies = currentHorizon()?.diagnosisFreq;
+    const frequencyText = frequencies ? `<p>Frequência dos diagnósticos: caixa saudável ${pct(frequencies.saudavel)}, problema de prazos ${pct(frequencies.timing)} e problema de margem ${pct(frequencies.margem)}.</p>` : '';
     const validation = shop?.coldStart
       ? '<p><strong>Pouco histórico:</strong> esta empresa ainda não tem validação independente. A previsão é um ponto de partida com maior incerteza.</p>'
       : finite(metrics?.mae) !== null && finite(metrics?.baselineMae) !== null
         ? `<p>No teste com dados sintéticos, o erro médio diário foi ${money(metrics.mae)}, ante ${money(metrics.baselineMae)} da referência simples. Isso não garante a mesma precisão em dados reais.</p>`
         : '<p>Não há comparação de erro disponível para este negócio.</p>';
-    $('methodContent').innerHTML = `${validation}${importance.length ? `<p>Variáveis com maior peso no modelo: ${importance.map(item => `${escapeHtml(item.name)} (${Math.round(Number(item.value) * 100)}%)`).join(', ')}. Peso estatístico não identifica causa.</p>` : ''}${method ? `<p>${escapeHtml(method)}</p>` : ''}`;
+    $('methodContent').innerHTML = `${frequencyText}${validation}${importance.length ? `<p>Variáveis com maior peso no modelo: ${importance.map(item => `${escapeHtml(item.name)} (${Math.round(Number(item.value) * 100)}%)`).join(', ')}. Peso estatístico não identifica causa.</p>` : ''}${method ? `<p>${escapeHtml(method)}</p>` : ''}`;
   }
 
   function renderRecommendation() {
     const rec = state.recommendation;
     if (!rec || typeof rec.action !== 'string') {
       $('recommendationContent').textContent = 'O motor ainda não forneceu uma recomendação para este período.';
+      $('technicalContent').textContent = 'Não há justificativa técnica disponível para este período.';
       return;
     }
     const healthy = rec.mode === 'saudavel' || rec.action === 'none';
     const structural = rec.mode === 'margem' && rec.structural === true;
     const coverage = finite(rec.coveragePct);
+    const shortReason = {
+      none: 'Seu caixa segue positivo na maior parte dos cenários. Continue acompanhando.',
+      negotiate: 'Vale conversar sobre um novo prazo para o próximo pagamento ao fornecedor.',
+      reduce: 'Rever gastos variáveis pode aliviar o caixa neste período.',
+      advance: 'Antecipar apenas a parte necessária dos recebíveis pode aliviar o aperto.',
+      mix: 'Um pequeno ajuste nas formas de pagamento pode trazer dinheiro para mais cedo.'
+    }[rec.action] || 'Veja a medida indicada para este período.';
     $('recommendationSection').classList.toggle('structural', structural);
     $('recommendationSection').classList.toggle('healthy', healthy);
-    $('recommendationContent').innerHTML = `<h2 id="recommendationTitle">${escapeHtml(rec.label || actionMeta[rec.action]?.title || 'Acompanhar o caixa')}</h2>${structural ? '<p class="structural-alert"><strong>Ajuste estrutural necessário.</strong> Esta medida apenas ameniza o déficit na simulação.</p>' : ''}<p class="recommendation-reason">${escapeHtml(rec.justificativa || 'Confira os cenários antes de decidir.')}</p>${healthy ? '<p class="small-note">Acompanhe a previsão; não há medidas corretivas sugeridas neste período.</p>' : `<div class="recommendation-metrics"><div><strong>${money(finite(rec.cost))}</strong><span>custo simulado</span></div><div><strong>${money(finite(rec.coversAmount))}</strong><span>melhora do pior saldo</span></div><div><strong>${coverage !== null ? `${Math.round(coverage)}%` : 'Indisponível'}</strong><span>do déficit coberto na simulação</span></div><div><strong>${money(finite(rec.saldo30Impacto))}</strong><span>efeito no saldo do dia 30</span></div></div><p class="small-note">Hipótese para ${Number(rec.horizon) || state.horizon} dias. Risco de algum saldo negativo no cenário-base: ${pct(rec.probNegative)}. Os valores de ação não têm faixa probabilística recalculada.</p>`}`;
+    $('recommendationContent').innerHTML = `<h2 id="recommendationTitle">${escapeHtml(healthy ? 'Acompanhar o caixa' : actionMeta[rec.action]?.title || rec.label || 'Veja esta medida')}</h2>${structural ? '<p class="structural-alert"><strong>Esta medida ajuda, mas não resolve sozinha.</strong> O ajuste nas entradas e saídas precisa continuar.</p>' : ''}<p class="recommendation-reason">${escapeHtml(shortReason)}</p>${healthy ? '' : `<div class="recommendation-metrics"><div><strong>${money(finite(rec.cost))}</strong><span>custo estimado</span></div><div><strong>${money(finite(rec.coversAmount))}</strong><span>alívio no pior dia</span></div><div><strong>${coverage !== null ? `${Math.round(coverage)}%` : 'Indisponível'}</strong><span>do aperto coberto</span></div><div><strong>${money(finite(rec.saldo30Impacto))}</strong><span>mudança no saldo do dia 30</span></div></div><p class="small-note">Estimativas para comparação; o resultado real pode variar.</p>`}`;
+    $('technicalContent').innerHTML = `<h3>Por que esta medida foi escolhida</h3><p>${escapeHtml(rec.justificativa || 'Justificativa indisponível.')}</p><p>Probabilidade de algum saldo negativo no cenário atual de ${state.horizon} dias: ${pct(rec.probNegative)}. Os efeitos das ações são simulações pontuais e não têm faixa probabilística recalculada.</p><h3>Limites dos ajustes</h3><p>O desconto no Pix, a mudança de parcelas e a antecipação são calculados pelo motor como hipóteses. Os controles de Pix e parcelamento são avaliados separadamente nesta tela. A promoção de estoque ainda não tem cálculo de demanda, margem ou entrada de caixa no motor.</p>`;
   }
 
   function renderActions() {
@@ -220,7 +239,7 @@
     const evaluated = evaluate(params);
     const baseline = evaluated.find(item => item.action === 'none') || null;
     state.actions = evaluated;
-    $('choicesIntro').textContent = `Cinco cenários hipotéticos calculados para 60 dias, incluindo não agir. O risco probabilístico do cenário-base é ${pct(currentHorizon()?.probNegative)} em ${state.horizon} dias; as ações abaixo ainda não têm faixa recalculada.`;
+    $('choicesIntro').textContent = 'Compare o que ajuda, o que não muda o resultado e o que pode piorar o caixa.';
     $('actionList').innerHTML = state.actions.length ? state.actions.map((item, index) => {
       const delta = improvement(item, baseline);
       const cost = actionCost(item);
@@ -228,7 +247,8 @@
       const selected = state.recommendation?.action === item.action;
       const incompatible = diagnosis === 'margem' && item.action === 'advance';
       const assumption = item.action === 'mix' ? `Desconto no Pix: ${params.pixDiscount}%; até ${params.maxInstall} parcelas.` : item.action === 'advance' ? `Valor ilustrativo antecipado: ${money(params.advance)}.` : '';
-      return `<button type="button" class="action-card ${item.action === 'none' ? 'baseline' : ''}" data-action-index="${index}"><div class="action-card-header"><div><span class="action-number">${item.action === 'none' ? 'REFERÊNCIA' : `CENÁRIO ${index}`} ${selected ? ' · ESCOLHA DO MOTOR' : ''}</span><br><strong>${escapeHtml(actionTitle(item))}</strong></div><span class="action-arrow" aria-hidden="true">›</span></div><p>${escapeHtml(actionSummary(item))} ${escapeHtml(assumption)}</p>${incompatible ? '<p class="action-caution">Não indicada para problema de margem; exibida apenas para comparação.</p>' : ''}<div class="action-metrics"><span>Custo simulado<b>${money(cost)}</b></span><span>${effectTitle}<b>${effectValue}</b></span></div></button>`;
+      const reason = delta !== null && delta <= 0.01 ? `<p class="action-caution">${escapeHtml(noHelpReason(item.action, params))}</p>` : '';
+      return `<button type="button" class="action-card ${item.action === 'none' ? 'baseline' : ''}" data-action-index="${index}"><div class="action-card-header"><div><span class="action-number">${item.action === 'none' ? 'REFERÊNCIA' : `CENÁRIO ${index}`} ${selected ? ' · SUGERIDA' : ''}</span><br><strong>${escapeHtml(actionTitle(item))}</strong></div><span class="action-arrow" aria-hidden="true">›</span></div><p>${escapeHtml(actionSummary(item))} ${escapeHtml(assumption)}</p>${reason}${incompatible ? '<p class="action-caution">Em problema de margem, esta opção é apenas uma comparação.</p>' : ''}<div class="action-metrics"><span>Custo estimado<b>${money(cost)}</b></span><span>${effectTitle}<b>${effectValue}</b></span></div></button>`;
     }).join('') : '<p class="support-copy">O motor ainda não retornou alternativas para este cenário.</p>';
     $('marginWarning').hidden = diagnosis !== 'margem';
     $('marginWarning').textContent = 'A antecipação aparece apenas como simulação comparativa. O motor não a recomenda para um problema de margem.';
@@ -260,29 +280,25 @@
   function renderSimulator() {
     $('pixValue').textContent = `${$('pixRange').value}%`;
     $('installmentsValue').textContent = `${options().maxInstall}×`;
-    const reference = evaluate({ pixDiscount: 0, maxInstall: 3 });
-    const adjusted = evaluate();
-    const base = adjusted.find(item => item.action === 'none');
-    const mix = adjusted.find(item => item.action === 'mix');
-    const baselineMix = reference.find(item => item.action === 'mix');
-    const changed = JSON.stringify(mix) !== JSON.stringify(baselineMix);
-    const defaultControls = $('pixRange').value === '0' && $('installmentsRange').value === '0';
-    const delta = mix ? improvement(mix, base) : null;
-    const cost = mix ? actionCost(mix) : null;
-    const deficit = Math.max(0, -(finite(base?.min) ?? 0));
-    const [effectTitle, effectValue] = changeLabel(delta);
-    $('simulatorResult').innerHTML = mix ? `<div><span>Custo simulado do ajuste</span><strong>${money(cost)}</strong></div><div><span>${effectTitle}</span><strong>${effectValue}</strong></div>` : '';
-    $('simulatorNote').textContent = defaultControls
-      ? shopDiagnosis() === 'margem'
-        ? 'Você pode testar o mix, mas adiantar entradas não corrige a margem. A faixa do gráfico representa o cenário base.'
-        : 'Ajuste os controles para comparar a ação de mix. A faixa do gráfico representa o cenário base.'
-      : changed
-        ? shopDiagnosis() === 'margem'
-          ? 'O ajuste pode adiantar entradas, mas não corrige o problema de margem; o desconto ainda tem custo. A faixa do gráfico continua no cenário base.'
-          : cost > deficit && deficit > 0
-          ? 'O custo deste ajuste supera o buraco estimado. Compare outras medidas antes de decidir. A faixa do gráfico continua no cenário base.'
-          : 'A ação de mix foi recalculada com essas hipóteses. O desconto tem custo; a faixa do gráfico continua no cenário base.'
-        : 'Esses ajustes não produziram diferença mensurável neste cenário. A faixa do gráfico continua no cenário base.';
+    const renderAdjustment = (target, params) => {
+      const items = evaluate(params);
+      const base = items.find(item => item.action === 'none');
+      const mix = items.find(item => item.action === 'mix');
+      const delta = mix ? improvement(mix, base) : null;
+      const [label, value] = changeLabel(delta);
+      $(target).innerHTML = mix
+        ? `<span>${label}: <strong>${value}</strong></span><span>Custo estimado: <strong>${money(actionCost(mix))}</strong></span>${delta !== null && delta <= 0.01 ? `<small>${escapeHtml(noHelpReason('mix', params))}</small>` : ''}`
+        : '<span>Não foi possível comparar este ajuste agora.</span>';
+    };
+    renderAdjustment('installmentsResult', { pixDiscount: 0, maxInstall: options().maxInstall });
+    renderAdjustment('pixResult', { pixDiscount: options().pixDiscount, maxInstall: 3 });
+  }
+  function renderStock() {
+    const share = Number($('stockShareRange').value);
+    const discount = Number($('stockDiscountRange').value);
+    $('stockShareValue').textContent = `${share}%`;
+    $('stockDiscountValue').textContent = `${discount}%`;
+    $('stockResult').textContent = `Plano de campanha: separar ${share}% do estoque e oferecer ${discount}% de desconto. Antes de lançar, confira a margem e os produtos escolhidos. O efeito no caixa ainda não pode ser estimado nesta demonstração.`;
   }
 
   function renderAll() {
@@ -298,9 +314,12 @@
     const showChoices = shopDiagnosis() !== 'saudavel';
     $('choicesSection').hidden = !showChoices;
     $('simulatorSection').hidden = !showChoices;
+    $('pixSection').hidden = !showChoices;
+    $('stockSection').hidden = !showChoices;
     if (showChoices) {
       renderActions();
       renderSimulator();
+      renderStock();
     } else {
       state.actions = [];
     }
@@ -309,6 +328,8 @@
   function selectShop(id) {
     state.shop = state.data?.shops?.find(shop => shop.id === id) || state.data?.shops?.[0] || null;
     if (state.shop) $('shopSelect').value = state.shop.id;
+    $('shopNote').hidden = !state.shop?.coldStart;
+    $('shopNote').textContent = state.shop?.coldStart ? 'Este negócio tem pouco histórico. A previsão merece atenção extra.' : '';
     $('notice').hidden = true;
     renderAll();
     $('notificationDot').hidden = shopDiagnosis() === 'saudavel';
@@ -350,7 +371,8 @@
   document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.area)));
   document.querySelectorAll('[data-horizon]').forEach(button => button.addEventListener('click', () => selectHorizon(Number(button.dataset.horizon))));
   $('shopSelect').addEventListener('change', event => selectShop(event.target.value));
-  ['pixRange', 'installmentsRange'].forEach(id => $(id).addEventListener('input', () => { renderActions(); renderSimulator(); }));
+  ['pixRange', 'installmentsRange'].forEach(id => $(id).addEventListener('input', renderSimulator));
+  ['stockShareRange', 'stockDiscountRange'].forEach(id => $(id).addEventListener('input', renderStock));
   $('backButton').addEventListener('click', closeDetail);
   $('notifyButton').addEventListener('click', showNotification);
   $('noticeClose').addEventListener('click', () => { $('notice').hidden = true; });
