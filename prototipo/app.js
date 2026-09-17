@@ -16,6 +16,7 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const finite = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) ? Number(value) : null;
+  const installmentChoices = [2, 3, 4, 6, 12];
   const state = { data: null, shop: null, horizon: 60, area: 'antecipa', actions: [], recommendation: null, selectedAction: null, notificationSeen: false };
 
   const actionMeta = {
@@ -23,7 +24,7 @@
     negotiate: { title: 'Conversar com o fornecedor', summary: 'Simule deslocar um pagamento por sete dias.', how: 'O vencimento do próximo fornecedor é deslocado em sete dias na simulação. A despesa continua no caixa futuro.', caution: 'Depende do aceite do fornecedor; ausência de multa é hipótese da demonstração.' },
     reduce: { title: 'Rever gastos variáveis', summary: 'Simule uma redução temporária de custos.', how: 'A simulação reduz 10% dos gastos operacionais variáveis do período.', caution: 'É uma hipótese: uma redução real pode afetar a operação e as vendas.' },
     advance: { title: 'Antecipar parte dos recebíveis', summary: 'Receba antes e compare o custo e as entradas futuras.', how: 'A simulação traz para hoje parte dos valores a receber, desconta uma taxa ilustrativa e retira esses valores das datas originais.', caution: 'Os valores exibidos podem não estar disponíveis para antecipação. Taxas, prazos e disponibilidade dependem de uma oferta real.' },
-    mix: { title: 'Ajustar as formas de pagamento', summary: 'Simule incentivo ao Pix e menos parcelas nas vendas futuras.', how: 'A simulação considera que parte dos clientes pode trocar o crédito pelo Pix e que novas vendas parceladas podem ser pagas em outros prazos. O desconto no Pix aparece como custo.', caution: 'A mudança no comportamento dos clientes é uma hipótese; o desconto tem custo e não garante adesão.' }
+    mix: { title: 'Mudar Pix e parcelas das novas vendas', summary: 'Simule desconto no Pix e um novo limite de parcelas.', how: 'O desconto pode levar parte dos clientes a pagar no Pix. Reduzir parcelas faz o dinheiro de vendas parceladas chegar antes, mas o cálculo também considera que algumas dessas vendas podem deixar de acontecer.', caution: 'A adesão ao Pix e a perda de vendas ao reduzir parcelas são hipóteses. Confira as condições reais antes de alterar a oferta aos clientes.' }
   };
   const actionSteps = {
     none: ['Acompanhe a previsão nos próximos dias.', 'Reavalie se aparecer um novo alerta.'],
@@ -45,13 +46,19 @@
   }
   function options() {
     const pixDiscount = Number($('pixRange').value);
-    const maxInstall = [3, 4, 6, 12][Number($('installmentsRange').value)] ?? 3;
+    const maxInstall = installmentChoices[Number($('installmentsRange').value)] ?? (finite(state.shop?.installments) ?? 4);
     return { pixDiscount, maxInstall };
   }
   function evaluate(extra = options()) {
     if (!state.shop || !state.data || typeof evaluateActions !== 'function') return [];
     try {
-      const result = evaluateActions(state.shop, state.data, extra);
+      const days = Math.min(state.horizon, state.data.dates.length, state.shop.forecast.length,
+        state.shop.expenses.length, state.shop.receivables.length);
+      if (!days) return [];
+      const periodShop = { ...state.shop, forecast: state.shop.forecast.slice(0, days),
+        expenses: state.shop.expenses.slice(0, days), receivables: state.shop.receivables.slice(0, days) };
+      const periodData = { ...state.data, dates: state.data.dates.slice(0, days) };
+      const result = evaluateActions(periodShop, periodData, extra);
       return Array.isArray(result) ? result.filter(item => item && typeof item.action === 'string') : [];
     } catch (error) {
       console.error('Não foi possível avaliar as alternativas:', error);
@@ -67,7 +74,7 @@
     const rec = state.recommendation;
     return {
       pixDiscount: finite(rec?.params?.pixDiscount) ?? 0.5,
-      maxInstall: finite(rec?.params?.maxInstall) ?? 3,
+      maxInstall: finite(rec?.params?.maxInstall) ?? (finite(state.shop?.installments) ?? 4),
       advance: finite(rec?.params?.advance) ?? Math.max(0, finite(rec?.buraco) ?? 0)
     };
   }
@@ -89,18 +96,6 @@
     if (delta === null) return ['Efeito no caixa', 'Indisponível'];
     if (delta <= 0.01) return ['Efeito no aperto', 'Não resolve neste caso'];
     if (delta > 0.01) return ['Alívio no maior aperto', money(delta)];
-  }
-  function noHelpReason(action, context = {}) {
-    if (action === 'none') return 'Sem uma nova medida, o dia de aperto permanece.';
-    if (action === 'negotiate') return 'Mudar este vencimento não altera o momento de maior aperto.';
-    if (action === 'reduce') return 'O corte testado não é suficiente para afastar o aperto.';
-    if (action === 'advance') return shopDiagnosis() === 'margem'
-      ? 'Antecipar só muda a data do dinheiro e acrescenta custo.'
-      : 'Receber esses valores antes não alivia o maior aperto; há uma taxa.';
-    if (action === 'mix') return finite(context.pixDiscount) === 0 && Number(context.maxInstall) === 3
-      ? 'Sem mudar desconto ou parcelas, o caixa continua igual.'
-      : 'A mudança testada não traz dinheiro suficiente antes do aperto.';
-    return 'Esta mudança não alivia o momento de maior aperto.';
   }
   function scrollTop() { $('appContent').scrollTo({ top: 0, behavior: 'smooth' }); }
 
@@ -170,15 +165,14 @@
     }
     const config = {
       saudavel: { symbol: '✓', title: 'Seu cenário de caixa é positivo', copy: `No fim de ${state.horizon} dias, ${pct(h.probPositiveClose)} dos cenários simulados fecham com saldo positivo. Siga acompanhando a previsão.` },
-      timing: { symbol: '!', title: 'Atenção ao prazo dos pagamentos', copy: `${pct(h.probNegative)} dos cenários simulados passam por saldo negativo em algum momento dos próximos ${state.horizon} dias. ${h.firstNegativeDay ? `O dia de maior concentração do primeiro aperto é ${day(h.firstNegativeDay)}.` : 'Nenhum dia negativo previsto foi identificado como o mais frequente.'}` },
-      margem: { symbol: '!', title: 'Entradas podem não cobrir as saídas', copy: `${pct(h.diagnosisFreq?.margem)} dos cenários foram classificados como problema de margem. Antecipar recebíveis não corrige esse desequilíbrio e acrescenta custo.` }
+      timing: { symbol: '!', title: 'Atenção ao prazo dos pagamentos', copy: h.firstNegativeDay ? `Data em que é mais provável o caixa ficar no vermelho: ${day(h.firstNegativeDay)}.` : 'Não há uma data predominante para o caixa ficar no vermelho.' },
+      margem: { symbol: '!', title: 'Entradas podem não cobrir as saídas', copy: h.firstNegativeDay ? `Data em que é mais provável o caixa ficar no vermelho: ${day(h.firstNegativeDay)}.` : 'Não há uma data predominante para o caixa ficar no vermelho.' }
     }[diagnosis];
-    const hole = finite(h.medianHole);
     if (diagnosis === 'saudavel') {
       $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p>`;
       return;
     }
-    $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p><div class="status-stat"><div class="stat-box"><strong>${pct(h.probNegative)}</strong><span>possibilidade de ficar no vermelho</span></div><div class="stat-box"><strong>${hole !== null ? money(Math.abs(hole)) : 'Indisponível'}</strong><span>falta de caixa típica quando ocorre</span></div></div><button class="status-cta" type="button" id="seeOptions">Ver o que fazer ↓</button>`;
+    $('statusContent').innerHTML = `<div class="status-top"><span class="status-symbol" aria-hidden="true">${config.symbol}</span><h2 id="statusTitle">${config.title}</h2></div><p class="status-copy">${config.copy}</p><div class="status-stat"><div class="stat-box"><strong>${pct(h.probNegative)}</strong><span>possibilidade de ficar no vermelho</span></div></div><button class="status-cta" type="button" id="seeOptions">Ver o que fazer ↓</button>`;
     $('seeOptions')?.addEventListener('click', () => $('recommendationSection').scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
 
@@ -189,7 +183,7 @@
     const text = diagnosis === 'saudavel'
       ? `A previsão indica um período favorável. ${h.firstNegativeDay === null ? (finite(h.probNegative) === 0 ? 'Nenhum dia negativo apareceu nas simulações deste período.' : 'Não há uma data predominante para eventual aperto.') : ''} Continue acompanhando o caixa.`
       : diagnosis === 'timing'
-        ? `Alguns pagamentos podem chegar antes do dinheiro das vendas. ${h.firstNegativeDay ? `O aperto aparece com mais frequência em ${day(h.firstNegativeDay)}.` : ''} Há tempo para comparar caminhos.`
+        ? `Alguns pagamentos podem chegar antes do dinheiro das vendas. ${h.firstNegativeDay ? `O dia em que é mais provável a queda do saldo para o vermelho é ${day(h.firstNegativeDay)}.` : ''} Há tempo para comparar caminhos.`
         : 'As saídas previstas podem superar as entradas ao longo do período. Adiantar dinheiro muda a data do recebimento, mas não reduz as despesas.';
     content.textContent = text;
     renderMethod();
@@ -220,38 +214,54 @@
     const healthy = rec.mode === 'saudavel' || rec.action === 'none';
     const structural = rec.mode === 'margem' && rec.structural === true;
     const coverage = finite(rec.coveragePct);
+    const baseParts = finite(state.shop?.installments) ?? 4;
+    const suggestedParts = finite(rec.params?.maxInstall) ?? baseParts;
+    const suggestedDiscount = finite(rec.params?.pixDiscount) ?? 0;
+    const mixMeasures = [
+      suggestedDiscount > 0 ? `oferecer ${String(suggestedDiscount).replace('.', ',')}% de desconto no Pix` : '',
+      suggestedParts !== baseParts ? `vender em até ${suggestedParts} parcelas em vez de ${baseParts}` : ''
+    ].filter(Boolean);
+    const mixTitle = mixMeasures.length ? mixMeasures.map(measure => measure[0].toUpperCase() + measure.slice(1)).join(' e ') : 'Mudar Pix e parcelas das novas vendas';
     const shortReason = {
-      none: 'Seu caixa segue positivo na maior parte dos cenários. Continue acompanhando.',
+      none: rec.watch ? 'Neste momento, o custo das medidas disponíveis não compensa o valor que pode faltar. Continue acompanhando a previsão.' : 'Seu caixa segue positivo na maior parte dos cenários. Continue acompanhando.',
       negotiate: 'Vale conversar sobre um novo prazo para o próximo pagamento ao fornecedor.',
       reduce: 'Rever gastos variáveis pode aliviar o caixa neste período.',
       advance: 'Antecipar apenas a parte necessária dos recebíveis pode aliviar o aperto.',
-      mix: 'Um pequeno ajuste nas formas de pagamento pode trazer dinheiro para mais cedo.'
+      mix: mixMeasures.length ? `A simulação considera ${mixMeasures.join(' e ')}.${suggestedParts < baseParts ? ' Menos parcelas podem antecipar recebimentos, mas também reduzir algumas vendas.' : ''}` : 'Compare como novas condições de pagamento podem mudar as entradas do caixa.'
     }[rec.action] || 'Veja a medida indicada para este período.';
     $('recommendationSection').classList.toggle('structural', structural);
     $('recommendationSection').classList.toggle('healthy', healthy);
-    $('recommendationContent').innerHTML = `<h2 id="recommendationTitle">${escapeHtml(healthy ? 'Acompanhar o caixa' : actionMeta[rec.action]?.title || rec.label || 'Veja esta medida')}</h2>${structural ? '<p class="structural-alert"><strong>Esta medida ajuda, mas não resolve sozinha.</strong> O ajuste nas entradas e saídas precisa continuar.</p>' : ''}<p class="recommendation-reason">${escapeHtml(shortReason)}</p>${healthy ? '' : `<div class="recommendation-metrics"><div><strong>${money(finite(rec.cost))}</strong><span>custo estimado</span></div><div><strong>${money(finite(rec.coversAmount))}</strong><span>alívio no maior aperto</span></div><div><strong>${coverage !== null ? `${Math.round(coverage)}%` : 'Indisponível'}</strong><span>do valor que pode faltar</span></div><div><strong>${money(finite(rec.saldo30Impacto))}</strong><span>mudança no saldo do dia 30</span></div></div><p class="small-note">Estimativas para comparação; o resultado real pode variar.</p>`}`;
+    const costLabel = rec.action === 'mix' ? suggestedParts < baseParts
+      ? 'descontos e vendas que podem deixar de acontecer' : 'descontos oferecidos no Pix' : 'custo estimado';
+    $('recommendationContent').innerHTML = `<h2 id="recommendationTitle">${escapeHtml(healthy ? 'Acompanhar o caixa' : rec.action === 'mix' ? mixTitle : actionMeta[rec.action]?.title || rec.label || 'Veja esta medida')}</h2>${structural ? '<p class="structural-alert"><strong>Esta medida ajuda, mas não resolve sozinha.</strong> O ajuste nas entradas e saídas precisa continuar.</p>' : ''}<p class="recommendation-reason">${escapeHtml(shortReason)}</p>${healthy ? '' : `<div class="recommendation-metrics"><div><strong>${money(finite(rec.cost))}</strong><span>${costLabel}</span></div><div><strong>${money(finite(rec.coversAmount))}</strong><span>alívio no maior aperto</span></div><div><strong>${coverage !== null ? `${Math.round(coverage)}%` : 'Indisponível'}</strong><span>do valor que pode faltar</span></div><div><strong>${money(finite(rec.saldo30Impacto))}</strong><span>mudança no saldo do dia 30</span></div></div><p class="small-note">Estimativas para comparação; o resultado real pode variar.</p>`}`;
     $('technicalContent').innerHTML = `<h3>Por que esta medida foi escolhida</h3><p>${escapeHtml(rec.justificativa || 'Justificativa indisponível.')}</p><p>Probabilidade de algum saldo negativo no cenário atual de ${state.horizon} dias: ${pct(rec.probNegative)}. Os efeitos das ações são simulações pontuais e não têm faixa probabilística recalculada.</p><h3>Limites dos ajustes</h3><p>O desconto no Pix, a mudança de parcelas e a antecipação são calculados com hipóteses. Os controles de Pix e parcelamento são avaliados separadamente nesta tela.</p>`;
   }
 
   function renderActions() {
-    const diagnosis = shopDiagnosis();
     const params = comparisonOptions();
     const evaluated = evaluate(params);
     const baseline = evaluated.find(item => item.action === 'none') || null;
     state.actions = evaluated;
-    $('choicesIntro').textContent = 'Compare o que ajuda, o que não muda o resultado e o que pode piorar o caixa.';
-    $('actionList').innerHTML = state.actions.length ? state.actions.map((item, index) => {
+    const visible = state.actions.filter(item => item.action !== 'none' &&
+      !(shopDiagnosis() === 'margem' && item.action === 'advance') &&
+      (improvement(item, baseline) ?? 0) > 0.01);
+    $('choicesSection').hidden = visible.length === 0;
+    $('choicesIntro').textContent = 'Estas mudanças melhoram o saldo no momento de maior aperto na simulação. Compare o custo antes de decidir.';
+    $('actionList').innerHTML = visible.map((item, displayIndex) => {
+      const index = state.actions.indexOf(item);
       const delta = improvement(item, baseline);
       const cost = actionCost(item);
       const [effectTitle, effectValue] = changeLabel(delta);
       const selected = state.recommendation?.action === item.action;
-      const incompatible = diagnosis === 'margem' && item.action === 'advance';
-      const assumption = item.action === 'mix' ? `Desconto no Pix: ${params.pixDiscount}%; até ${params.maxInstall} parcelas.` : item.action === 'advance' ? `Valor ilustrativo antecipado: ${money(params.advance)}.` : '';
-      const reason = delta !== null && delta <= 0.01 ? `<p class="action-caution">${escapeHtml(noHelpReason(item.action, params))}</p>` : '';
-      return `<button type="button" class="action-card ${item.action === 'none' ? 'baseline' : ''}" data-action-index="${index}"><div class="action-card-header"><div><span class="action-number">${item.action === 'none' ? 'SEM MUDANÇA' : `OPÇÃO ${index}`} ${selected ? ' · SUGERIDA' : ''}</span><br><strong>${escapeHtml(actionTitle(item))}</strong></div><span class="action-arrow" aria-hidden="true">›</span></div><p>${escapeHtml(actionSummary(item))} ${escapeHtml(assumption)}</p>${reason}${incompatible ? '<p class="action-caution">Quando as saídas superam as entradas, esta opção é apenas uma comparação.</p>' : ''}<div class="action-metrics"><span>Custo estimado<b>${money(cost)}</b></span><span>${effectTitle}<b>${effectValue}</b></span></div></button>`;
-    }).join('') : '<p class="support-copy">Ainda não há opções para comparar neste período.</p>';
-    $('marginWarning').hidden = diagnosis !== 'margem';
-    $('marginWarning').textContent = 'A antecipação aparece apenas para comparação. Ela não é sugerida quando as saídas podem superar as entradas.';
+      const baseParts = finite(state.shop?.installments) ?? 4;
+      const mixOnlyPix = item.action === 'mix' && params.pixDiscount > 0 && params.maxInstall === baseParts;
+      const mixOnlyParcels = item.action === 'mix' && params.pixDiscount === 0 && params.maxInstall !== baseParts;
+      const cardTitle = mixOnlyPix ? 'Oferecer desconto no Pix' : mixOnlyParcels ? 'Mudar o limite de parcelas' : actionTitle(item);
+      const cardSummary = mixOnlyPix ? 'Parte dos clientes pode pagar mais cedo com o desconto.' : mixOnlyParcels ? 'Menos parcelas antecipam entradas, mas podem reduzir vendas.' : actionSummary(item);
+      const assumption = item.action === 'mix' ? `${params.pixDiscount > 0 ? `Desconto no Pix: ${String(params.pixDiscount).replace('.', ',')}%. ` : ''}${params.maxInstall !== baseParts ? `Até ${params.maxInstall} parcelas, em vez de ${baseParts}.` : ''}` : item.action === 'advance' ? `Valor ilustrativo antecipado: ${money(params.advance)}.` : '';
+      return `<button type="button" class="action-card ${selected ? 'suggested' : ''}" data-action-index="${index}"><div class="action-card-header"><div><span class="action-number">OPÇÃO ${displayIndex + 1} ${selected ? ' · SUGERIDA PARA VOCÊ' : ''}</span><br><strong>${escapeHtml(cardTitle)}</strong></div><span class="action-arrow" aria-hidden="true">›</span></div><p>${escapeHtml(cardSummary)} ${escapeHtml(assumption)}</p><div class="action-metrics"><span>Custo estimado<b>${money(cost)}</b></span><span>${effectTitle}<b>${effectValue}</b></span></div></button>`;
+    }).join('');
+    $('marginWarning').hidden = true;
     document.querySelectorAll('[data-action-index]').forEach(button => button.addEventListener('click', () => showDetail(Number(button.dataset.actionIndex))));
   }
 
@@ -266,7 +276,7 @@
     const end = finite(item.end), baseEnd = finite(baseline?.end);
     const endDelta = end !== null && baseEnd !== null ? end - baseEnd : null;
     const steps = actionSteps[item.action] || ['Confira as condições reais da alternativa.', 'Compare custos e efeitos futuros antes de decidir.'];
-    $('detailContent').innerHTML = `<div class="detail-hero"><span class="eyebrow">ENTENDA A ALTERNATIVA</span><h1>${escapeHtml(actionTitle(item))}</h1><p>${escapeHtml(actionSummary(item))}</p></div><div class="detail-metrics"><div class="stat-box"><strong>${money(actionCost(item))}</strong><span>custo estimado</span></div><div class="stat-box"><strong>${effectValue}</strong><span>${effectTitle.toLowerCase()}</span></div></div><div class="detail-card"><h2>Antes e depois · hipótese de 60 dias</h2><div class="before-after"><div><span>Sem a medida</span><strong>${money(finite(baseline?.min))}</strong><small>menor saldo estimado</small></div><span aria-hidden="true">→</span><div><span>Com a medida</span><strong>${money(finite(item.min))}</strong><small>menor saldo estimado</small></div></div><p class="small-note">Risco de algum saldo negativo no cenário-base de ${state.horizon} dias: ${pct(currentHorizon()?.probNegative)}. A faixa probabilística não foi recalculada para esta ação.</p></div><div class="detail-card"><h2>Como funciona</h2><p>${escapeHtml(meta.how || 'Confira as hipóteses desta ação antes de decidir.')}</p></div><div class="detail-card"><h2>O que muda depois</h2><p>Na comparação de 60 dias, a diferença em relação a manter como está é ${endDelta !== null ? money(endDelta) : 'indisponível'}. ${finite(item.negativeDays) !== null ? `A previsão ainda mostra ${Number(item.negativeDays)} dia(s) com saldo negativo.` : 'A quantidade de dias negativos não foi informada.'} Valores podem mudar com vendas, despesas e prazos reais.</p></div><div class="detail-card"><h2>Plano da sessão</h2><p>Passos para avaliar esta medida; nenhuma etapa é executada automaticamente.</p><ol class="plan-steps">${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol></div><div class="detail-card detail-caution"><h2>Antes de decidir</h2><p>${escapeHtml(meta.caution || 'Confira as condições reais e os efeitos sobre os próximos meses antes de agir.')}</p></div><p class="detail-footer">Esta tela explica uma simulação. Nenhuma negociação, antecipação ou contratação é executada aqui.</p>`;
+    $('detailContent').innerHTML = `<div class="detail-hero"><span class="eyebrow">ENTENDA A ALTERNATIVA</span><h1>${escapeHtml(actionTitle(item))}</h1><p>${escapeHtml(actionSummary(item))}</p></div><div class="detail-metrics"><div class="stat-box"><strong>${money(actionCost(item))}</strong><span>custo estimado</span></div><div class="stat-box"><strong>${effectValue}</strong><span>${effectTitle.toLowerCase()}</span></div></div><div class="detail-card"><h2>Antes e depois · hipótese de ${state.horizon} dias</h2><div class="before-after"><div><span>Sem a medida</span><strong>${money(finite(baseline?.min))}</strong><small>menor saldo estimado</small></div><span aria-hidden="true">→</span><div><span>Com a medida</span><strong>${money(finite(item.min))}</strong><small>menor saldo estimado</small></div></div><p class="small-note">Risco de algum saldo negativo no cenário-base de ${state.horizon} dias: ${pct(currentHorizon()?.probNegative)}. A faixa probabilística não foi recalculada para esta ação.</p></div><div class="detail-card"><h2>Como funciona</h2><p>${escapeHtml(meta.how || 'Confira as hipóteses desta ação antes de decidir.')}</p></div><div class="detail-card"><h2>O que muda depois</h2><p>Na comparação de ${state.horizon} dias, a diferença em relação a manter como está é ${endDelta !== null ? money(endDelta) : 'indisponível'}. ${finite(item.negativeDays) !== null ? `A previsão ainda mostra ${Number(item.negativeDays)} dia(s) com saldo negativo.` : 'A quantidade de dias negativos não foi informada.'} Valores podem mudar com vendas, despesas e prazos reais.</p></div><div class="detail-card"><h2>Plano da sessão</h2><p>Passos para avaliar esta medida; nenhuma etapa é executada automaticamente.</p><ol class="plan-steps">${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol></div><div class="detail-card detail-caution"><h2>Antes de decidir</h2><p>${escapeHtml(meta.caution || 'Confira as condições reais e os efeitos sobre os próximos meses antes de agir.')}</p></div><p class="detail-footer">Esta tela explica uma simulação. Nenhuma negociação, antecipação ou contratação é executada aqui.</p>`;
     $('antecipaView').hidden = true;
     $('detailView').hidden = false;
     scrollTop();
@@ -278,7 +288,7 @@
   }
 
   function renderSimulator() {
-    $('pixValue').textContent = `${$('pixRange').value}%`;
+    $('pixValue').textContent = `${$('pixRange').value.replace('.', ',')}%`;
     $('installmentsValue').textContent = `${options().maxInstall}×`;
     const days = Math.min(state.horizon, state.data?.dates?.length ?? 0, state.shop?.forecast?.length ?? 0,
       state.shop?.expenses?.length ?? 0, state.shop?.receivables?.length ?? 0);
@@ -305,13 +315,13 @@
         <div class="result-block"><span>Saldo ao fim de ${days} dias</span>
           <div class="result-pair"><span>Sem a mudança: <strong>${money(base.end)}</strong></span><span>Com a mudança: <strong>${money(changed.end)}</strong></span></div>
           <strong>${difference(endDelta)} ao fim do período</strong></div>
-        ${pix ? `<div class="result-block"><span>Total oferecido em descontos no Pix</span><strong>${money(changed.fee)}</strong><small>É o valor que deixa de entrar pelas vendas com o desconto testado.</small></div>` : ''}
+        <div class="result-block"><span>${pix ? 'Total oferecido em descontos no Pix' : 'Vendas que podem deixar de acontecer'}</span><strong>${money(changed.fee)}</strong><small>${pix ? 'É o valor que deixa de entrar pelas vendas com o desconto testado.' : 'Ao reduzir as parcelas, alguns clientes podem desistir da compra. Este valor é uma hipótese da simulação, não uma cobrança.'}</small></div>
         <small>Valores simulados para os próximos ${days} dias; o resultado real pode variar.</small>`;
     };
     try {
       const base = simulate(periodShop, periodData, { action: 'none' });
       const installments = simulate(periodShop, periodData, { action: 'mix', pixDiscount: 0, maxInstall: options().maxInstall });
-      const pix = simulate(periodShop, periodData, { action: 'mix', pixDiscount: options().pixDiscount, maxInstall: 3 });
+      const pix = simulate(periodShop, periodData, { action: 'mix', pixDiscount: options().pixDiscount, maxInstall: finite(state.shop?.installments) ?? 4 });
       renderAdjustment('installmentsResult', base, installments, false);
       renderAdjustment('pixResult', base, pix, true);
     } catch (error) {
@@ -325,7 +335,7 @@
     const recommendedPix = finite(state.recommendation?.params?.pixDiscount);
     $('pixRange').value = String(recommendedPix ?? 0.5);
     const recommendedInstallments = finite(state.recommendation?.params?.maxInstall);
-    $('installmentsRange').value = String(Math.max(0, [3, 4, 6, 12].indexOf(recommendedInstallments ?? 3)));
+    $('installmentsRange').value = String(Math.max(0, installmentChoices.indexOf(recommendedInstallments ?? (finite(state.shop?.installments) ?? 4))));
     renderChart();
     renderStatus();
     renderExplanation();
