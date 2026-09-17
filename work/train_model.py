@@ -111,9 +111,10 @@ for chave, perfil in perfis['negocios'].items():
  mix_std = [perfil['mix_desvio_observado'][m] for m in MODALIDADES]
  estimativas = [mix[i] * (1 - mix[i]) / mix_std[i] ** 2 - 1 for i in range(len(mix)) if mix_std[i] > 0]
  concentracao = max(2.0, float(np.median(estimativas)))
+ parcelas = base.MODALIDADES['credito_4x'][2]     # 4 parcelas do crédito parcelado, vindo do gerador
  uncertainty = montecarlo.simular_cenarios(
   forecast, actual - testpred, mix, concentracao, rates, delays, receb_fut[chave], expenses_total,
-  perfil['saldo_inicial'], future, diagnosis['entradas90'], diagnosis['saidas90'], mc)
+  perfil['saldo_inicial'], future, diagnosis['entradas90'], diagnosis['saidas90'], mc, parcelas=parcelas)
  uncertainty['method'] = ('2000 cenários. Previsível (fixo): recebíveis de vendas já feitas, aluguel, folha, '
                           'imposto e contas com data conhecida. Incerto (sorteado por cenário): volume de vendas '
                           '(reamostragem dos resíduos do teste de 60 dias), mix de pagamento (Dirichlet em torno do '
@@ -121,7 +122,7 @@ for chave, perfil in perfis['negocios'].items():
                           'crédito (hipótese). Faixa principal: 95% (p2,5–p97,5). Diagnóstico calculado em cada cenário.')
  shops.append({'id': chave, 'name': perfil['nome'], 'sector': perfil['setor'],
                'age': perfil['meses_operando'], 'balance': perfil['saldo_inicial'],
-               'mix': mix, 'rates': rates, 'delays': delays,
+               'mix': mix, 'rates': rates, 'delays': delays, 'installments': parcelas,
                'history': [{'date': dates[i].isoformat(), 'sales': float(y[i])} for i in range(N - 90, N)],
                'forecast': forecast.tolist(), 'receivables': receb_fut[chave].round(2).tolist(),
                'expenses': expenses, 'metrics': metrics, 'uncertainty': uncertainty, 'diagnosis': diagnosis,

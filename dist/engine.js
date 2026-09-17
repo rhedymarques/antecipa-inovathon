@@ -4,23 +4,30 @@ function simulate(shop,data,options={}) {
  const action=options.action??'none';
  const days=data.dates.length;
  const incoming=Array(days).fill(0), expenses=shop.expenses.map(e=>e.operating+e.supplier+e.fixed);
- // Alavanca "ajustar o mix de venda": um desconto no Pix migra crédito -> Pix por uma elasticidade
- // declarada (6 p.p. de crédito por 1% de desconto) e o parcelamento máximo muda o número de parcelas
- // do crédito parcelado, alterando o prazo de liquidação. Hipóteses; não modela efeito sobre volume.
- let mix=shop.mix, maxInstall=3, pixDisc=0;
+ const baseParts=shop.installments??4;   // nº de parcelas do crédito parcelado vem dos dados (credito_4x = 4)
+ // Alavanca "ajustar o mix de venda": um desconto no Pix migra crédito -> Pix (6 p.p. por 1%); e o
+ // parcelamento (2,3,4,6,12) muda o prazo do crédito parcelado. Reduzir parcelas acelera o caixa, mas
+ // parte das vendas parceladas deixa de acontecer: -8% de volume por parcela abaixo da base (hipótese
+ // declarada), somado ao custo da alavanca. Aumentar parcelas apenas alonga o prazo.
+ let mix=shop.mix, parcels=baseParts, pixDisc=0, volFactor=1;
  if(action==='mix') {
   const d=Math.min(6,Math.max(0,Number(options.pixDiscount??0)));
-  pixDisc=d/100; maxInstall=[3,4,6,12].includes(+options.maxInstall)?+options.maxInstall:3;
+  pixDisc=d/100; parcels=[2,3,4,6,12].includes(+options.maxInstall)?+options.maxInstall:baseParts;
+  volFactor=Math.max(0,1-0.08*Math.max(0,baseParts-parcels));
   const credit=shop.mix[2]+shop.mix[3], migr=Math.min(credit,0.06*d);
   mix=[...shop.mix];
   if(credit>0){mix[2]-=migr*shop.mix[2]/credit;mix[3]-=migr*shop.mix[3]/credit;mix[0]+=migr;}
  }
  shop.forecast.forEach((gross,i)=>mix.forEach((share,m)=>{
-  const parts=m===3?maxInstall:1, net=gross*(1+shock)*share*(1-shop.rates[m])*(m===0?1-pixDisc:1);
+  const parts=m===3?parcels:1, vol=m===3?volFactor:1;
+  const net=gross*(1+shock)*share*(1-shop.rates[m])*(m===0?1-pixDisc:1)*vol;
   for(let p=0;p<parts;p++) { const due=i+shop.delays[m]+30*p; if(due<days) incoming[due]+=net/parts; }
  }));
  const receivables=[...shop.receivables]; let fee=0,advanced=0,shifted=0;
- if(action==='mix') shop.forecast.forEach(gross=>fee+=gross*(1+shock)*mix[0]*pixDisc); // custo = desconto concedido no Pix
+ if(action==='mix') shop.forecast.forEach(gross=>{
+  fee+=gross*(1+shock)*mix[0]*pixDisc;                             // custo = desconto concedido no Pix
+  fee+=gross*(1+shock)*mix[3]*(1-shop.rates[3])*(1-volFactor);     // + vendas parceladas perdidas ao reduzir parcelas
+ });
  if(action==='negotiate') {
   const i=shop.expenses.findIndex(e=>e.supplier>0);
   if(i>=0 && i+7<days){shifted=shop.expenses[i].supplier;expenses[i]-=shifted;expenses[i+7]+=shifted;}
@@ -108,19 +115,23 @@ function recommend(shop,data,options={}){
   }
   lo=hi;left=right;
  }
- let mx=null;for(let d=0;d<=6.0001;d+=0.5){const r=simulate(shop,data,{...options,action:'mix',pixDiscount:d,maxInstall:3});if(minH(r)>=alvo-1){mx={action:'mix',params:{pixDiscount:d,maxInstall:3},r,cost:r.fee};break;}}
- cand.push(mx||(()=>{const r=simulate(shop,data,{...options,action:'mix',pixDiscount:6,maxInstall:3});return{action:'mix',params:{pixDiscount:6,maxInstall:3},r,cost:r.fee};})());
+ // mix: procura a config mais barata que cobre, considerando desconto no Pix E redução de parcelamento
+ const baseParts=shop.installments??4, parcelOpts=[...new Set([baseParts,3,2])].filter(v=>v<=baseParts);
+ let mx=null;
+ for(const parcels of parcelOpts)for(let d=0;d<=6.0001;d+=0.5){const r=simulate(shop,data,{...options,action:'mix',pixDiscount:d,maxInstall:parcels});if(minH(r)>=alvo-1){if(!mx||r.fee<mx.cost)mx={action:'mix',params:{pixDiscount:d,maxInstall:parcels},r,cost:r.fee};break;}}
+ cand.push(mx||(()=>{const r=simulate(shop,data,{...options,action:'mix',pixDiscount:6,maxInstall:2});return{action:'mix',params:{pixDiscount:6,maxInstall:2},r,cost:r.fee};})());
+ const mixDesc=pp=>{const b=[];if(pp.pixDiscount>0)b.push(`desconto de ${pp.pixDiscount}% no Pix`);if(pp.maxInstall<baseParts)b.push(`parcelamento em ${pp.maxInstall}x`);return b.length?` (${b.join(', ')})`:'';};
  const cobre=cand.filter(c=>minH(c.r)>=alvo-1&&c.cost<=buraco+1);
  if(cobre.length){cobre.sort((a,b)=>a.cost-b.cost||minH(b.r)-minH(a.r));const c=cobre[0];
   // quando cobrir custa mais que metade do buraco, agir se aproxima do próprio risco: melhor
   // acompanhar (eixo 3 do desafio — não empurrar ação cara para um aperto pequeno).
   if(c.cost>0.5*buraco)
    return pack('none',{},base,0,{watch:true,justificativa:`Cobrir esse aperto custaria ${brl(c.cost)}, perto do próprio risco de ${brl(buraco)} — agir custa quase o que se perderia. Não compensa agora: o sistema segue acompanhando e reavalia nos próximos dias, quando o quadro ficar mais claro.`});
-  const p=c.action==='mix'?` (desconto de ${c.params.pixDiscount}% no Pix)`:c.action==='advance'?` (${brl(c.params.advance)})`:'';
+  const p=c.action==='mix'?mixDesc(c.params):c.action==='advance'?` (${brl(c.params.advance)})`:'';
   return pack(c.action,c.params,c.r,c.cost,{justificativa:`Seu caixa aperta${base.firstNegative?` em ${dia(base.firstNegative)}`:''}, faltando ${brl(buraco)}. ${LABELS[c.action]}${p} cobre esse buraco pelo menor custo (${c.cost>0?brl(c.cost):'sem custo'}) e mantém o saldo no positivo.`});}
  // 4. nada cobre sozinho: a mais barata que chega mais perto, dizendo que não fecha a conta
  const pool=cand.filter(c=>c.cost<=buraco+1);(pool.length?pool:cand).sort((a,b)=>minH(b.r)-minH(a.r)||a.cost-b.cost);const c=(pool.length?pool:cand)[0];
- const p=c.action==='mix'?` (desconto de ${c.params.pixDiscount}% no Pix)`:c.action==='advance'?` (${brl(c.params.advance)})`:'';
+ const p=c.action==='mix'?mixDesc(c.params):c.action==='advance'?` (${brl(c.params.advance)})`:'';
  return pack(c.action,c.params,c.r,c.cost,{partial:true,justificativa:`Nenhuma alternativa sozinha cobre o buraco de ${brl(buraco)}. A mais barata que chega mais perto é ${LABELS[c.action].toLowerCase()}${p}; ela não fecha a conta sozinha — combine com revisão de custos e prazos.`});
 }
 if(typeof module!=='undefined') module.exports={simulate,financialSnapshot,evaluateActions,diagnose,recommend};

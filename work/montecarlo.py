@@ -23,12 +23,12 @@ QUANTIS = [2.5, 5, 25, 50, 75, 95, 97.5]
 CHAVES_Q = ['q2_5', 'q5', 'q25', 'q50', 'q75', 'q95', 'q97_5']
 
 
-def _receita_central(forecast, mix, rates, delays, H):
+def _receita_central(forecast, mix, rates, delays, H, parcelas):
  """Recebimento das novas vendas no cenário central (mix base, sem chargeback)."""
  total = 0.0
  for i, g in enumerate(forecast):
   for m, share in enumerate(mix):
-   parts = 3 if m == 3 else 1
+   parts = parcelas if m == 3 else 1
    for p in range(parts):
     if i + delays[m] + 30 * p < H:
      total += g * share * (1 - rates[m]) / parts
@@ -36,7 +36,7 @@ def _receita_central(forecast, mix, rates, delays, H):
 
 
 def simular_cenarios(forecast, residuos, mix, concentracao, rates, delays, existing, expenses,
-                     opening, dias_future, entradas90, saidas90, rng, horizontes=(30, 60), n=2000):
+                     opening, dias_future, entradas90, saidas90, rng, parcelas=4, horizontes=(30, 60), n=2000):
  H = len(forecast)
  forecast = np.asarray(forecast, float); residuos = np.asarray(residuos, float)
  existing = np.asarray(existing, float); expenses = np.asarray(expenses, float)
@@ -47,10 +47,10 @@ def simular_cenarios(forecast, residuos, mix, concentracao, rates, delays, exist
  mix_scen = rng.dirichlet(mix * concentracao, size=n)                              # mix ~ Dirichlet(mix*conc)
  chargeback = rng.uniform(0.0, 0.015, size=n)                                      # taxa sobre o crédito (hipótese)
 
- # liquidação das novas vendas por cenário; crédito = índices 2 e 3 (parcelado em 3, igual ao engine.js)
+ # liquidação das novas vendas por cenário; crédito = índices 2 e 3 (parcelado em `parcelas`, igual ao engine.js)
  incoming = np.zeros((n, H))
  for m in range(len(mix)):
-  parts = 3 if m == 3 else 1
+  parts = parcelas if m == 3 else 1
   liquido_credito = 1.0 - (chargeback if m >= 2 else 0.0)      # chargeback só incide no crédito
   fator = mix_scen[:, m] * (1 - rates[m]) / parts * liquido_credito
   for p in range(parts):
@@ -65,7 +65,7 @@ def simular_cenarios(forecast, residuos, mix, concentracao, rates, delays, exist
  # ---- diagnóstico DENTRO de cada cenário (regra da Tarefa 3) ------------------
  # margem é estrutural (entradas−saídas em 90 dias): reescalamos as entradas de 90 dias
  # pelo fator de receita realizado do cenário (volume × mix × chargeback).
- base = _receita_central(forecast, mix, rates, delays, H)
+ base = _receita_central(forecast, mix, rates, delays, H, parcelas)
  fator_receita = incoming.sum(axis=1) / base if base else np.ones(n)
  margem = entradas90 * fator_receita - saidas90 <= 0           # (n,)
 

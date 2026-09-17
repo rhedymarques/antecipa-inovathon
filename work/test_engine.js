@@ -8,10 +8,13 @@ for(const shop of data.shops){
  near(advance.daily[0].balance-base.daily[0].balance,advance.advanced-advance.fee);
  assert(simulate(shop,data,{shock:-40}).end<=base.end);
  const max=simulate(shop,data,{action:'advance',advance:1e6});near(max.advanced,shop.receivables.slice(1).reduce((a,b)=>a+b,0));
- // Ajustar o mix: custo = desconto no Pix (≥0); sem desconto e com o mesmo parcelamento não muda nada
+ // Ajustar o mix: custo = desconto no Pix + vendas parceladas perdidas (≥0). Sem desconto e no
+ // parcelamento base (vindo dos dados) nada muda; reduzir parcelas tem custo de volume.
+ const bp=shop.installments??4;
  assert(mix.fee>=0&&Number.isFinite(mix.end));
- near(simulate(shop,data,{action:'mix',pixDiscount:0,maxInstall:3}).end,base.end);
- assert(simulate(shop,data,{action:'mix',pixDiscount:6,maxInstall:3}).fee>0,'desconto no Pix deveria ter custo');
+ near(simulate(shop,data,{action:'mix',pixDiscount:0,maxInstall:bp}).end,base.end);
+ assert(simulate(shop,data,{action:'mix',pixDiscount:6,maxInstall:bp}).fee>0,'desconto no Pix deveria ter custo');
+ assert(simulate(shop,data,{action:'mix',pixDiscount:0,maxInstall:2}).fee>0,'reduzir parcelamento deveria ter custo de volume');
  for(const scenario of [base,advance,negotiate,reduce,mix]){let previous=shop.balance;for(const d of scenario.daily){near(d.balance,previous+d.existing+d.newSales-d.expense);assert(Number.isFinite(d.balance));previous=d.balance;}}
  const f=financialSnapshot(shop,shop.balance,20);near(f.ncg,shop.finance.stock+shop.receivables.reduce((a,b)=>a+b,0)+(shop.receivablesBeyondWindow??0)+shop.finance.otherReceivables-shop.finance.operatingLiabilities);near(f.st,shop.balance-shop.finance.financialDebt);near(f.incremental,Math.max(0,f.ncg)*.2);assert(evaluateActions(shop,data).length===5);
  if(shop.coldStart){assert(shop.history.length===14);assert(shop.metrics===null);assert(shop.peerCount===18);}
@@ -86,4 +89,11 @@ assert(crec.justificativa.includes('acompanhando'),'justificativa deve explicar 
 // No Bar do Léo cobrir custa ~R$451 para um buraco de ~R$502 (>50%): deve virar acompanhar.
 const barR=recommend(data.shops.find(s=>s.id==='bar'),data,{horizon:60});
 assert(barR.action==='none'&&barR.watch,'Bar: custo de cobrir passa de 50% do buraco, deve acompanhar');
+// recommend() considera reduzir o parcelamento: com o parcelado dominante e o aperto logo após D+30,
+// a alavanca escolhida usa menos parcelas que a base (aqui como a cobertura mais próxima disponível).
+const parc={balance:0,installments:4,mix:[0,0,0,1],rates:[0,.012,.025,.035],delays:[0,1,30,30],
+ forecast:Array(60).fill(300),receivables:Array(60).fill(0),
+ expenses:Array.from({length:60},(_,i)=>({operating:0,supplier:0,fixed:i===32?2400:0}))};
+const prec=recommend(parc,data,{horizon:60});
+assert(prec.action==='mix'&&prec.params.maxInstall<parc.installments,'recommend deve considerar reduzir o parcelamento quando ajuda mais barato');
 console.log('PASS: conservação de caixa, antecipação mínima, teto, reprodução, veto de margem, regra dos 50%, renegociação, redução, choques, diagnóstico e Monte Carlo.');
