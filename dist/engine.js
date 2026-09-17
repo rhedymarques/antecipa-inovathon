@@ -5,18 +5,21 @@ function simulate(shop,data,options={}) {
  const days=data.dates.length;
  const incoming=Array(days).fill(0), expenses=shop.expenses.map(e=>e.operating+e.supplier+e.fixed);
  const baseParts=shop.installments??4;   // nº de parcelas do crédito parcelado vem dos dados (credito_4x = 4)
- // Alavanca "ajustar o mix de venda": um desconto no Pix migra crédito -> Pix (6 p.p. por 1%); e o
- // parcelamento (2,3,4,6,12) muda o prazo do crédito parcelado. Reduzir parcelas acelera o caixa, mas
- // parte das vendas parceladas deixa de acontecer: -8% de volume por parcela abaixo da base (hipótese
- // declarada), somado ao custo da alavanca. Aumentar parcelas apenas alonga o prazo.
- let mix=shop.mix, parcels=baseParts, pixDisc=0, volFactor=1;
+ // Alavanca "ajustar o mix de venda" (hipóteses declaradas, não valores estimados):
+ //  - desconto no Pix migra crédito -> Pix por uma curva que satura: migr = credito*TETO*(1-e^(-K*d)).
+ //    Há teto (~40% do crédito) e rendimento decrescente — quem parcela nem sempre tem à vista.
+ //  - perda de conversão: PERDA (20%) do volume que migraria é venda que não acontece (some do fluxo).
+ //  - parcelamento (2,3,4,6,12) muda o prazo; reduzir parcelas perde 8% de volume por parcela abaixo da base.
+ const TETO=0.40, K=0.4, PERDA=0.20;
+ let mix=shop.mix, parcels=baseParts, pixDisc=0, volFactor=1, lostShare=0;
  if(action==='mix') {
   const d=Math.min(6,Math.max(0,Number(options.pixDiscount??0)));
   pixDisc=d/100; parcels=[2,3,4,6,12].includes(+options.maxInstall)?+options.maxInstall:baseParts;
   volFactor=Math.max(0,1-0.08*Math.max(0,baseParts-parcels));
-  const credit=shop.mix[2]+shop.mix[3], migr=Math.min(credit,0.06*d);
+  const credit=shop.mix[2]+shop.mix[3], migr=credit*TETO*(1-Math.exp(-K*d));
+  lostShare=migr*PERDA;                                           // volume migrado que não converte
   mix=[...shop.mix];
-  if(credit>0){mix[2]-=migr*shop.mix[2]/credit;mix[3]-=migr*shop.mix[3]/credit;mix[0]+=migr;}
+  if(credit>0){mix[2]-=migr*shop.mix[2]/credit;mix[3]-=migr*shop.mix[3]/credit;mix[0]+=migr*(1-PERDA);}
  }
  shop.forecast.forEach((gross,i)=>mix.forEach((share,m)=>{
   const parts=m===3?parcels:1, vol=m===3?volFactor:1;
@@ -25,14 +28,19 @@ function simulate(shop,data,options={}) {
  }));
  const receivables=[...shop.receivables]; let fee=0,advanced=0,shifted=0;
  if(action==='mix') shop.forecast.forEach(gross=>{
-  fee+=gross*(1+shock)*mix[0]*pixDisc;                             // custo = desconto concedido no Pix
-  fee+=gross*(1+shock)*mix[3]*(1-shop.rates[3])*(1-volFactor);     // + vendas parceladas perdidas ao reduzir parcelas
+  const g=gross*(1+shock);
+  fee+=g*mix[0]*pixDisc;                                          // desconto concedido no Pix
+  fee+=g*lostShare*(1-pixDisc);                                   // vendas perdidas na migração (não convertem)
+  fee+=g*mix[3]*(1-shop.rates[3])*(1-volFactor);                  // vendas parceladas perdidas ao reduzir parcelas
  });
  if(action==='negotiate') {
   const i=shop.expenses.findIndex(e=>e.supplier>0);
   if(i>=0 && i+7<days){shifted=shop.expenses[i].supplier;expenses[i]-=shifted;expenses[i+7]+=shifted;}
  }
- if(action==='reduce') shop.expenses.forEach((e,i)=>expenses[i]-=e.operating*.1);
+ if(action==='reduce') { // hipótese: corte capado e com atrito, não é economia mágica de custo zero
+  const CORTE_MAX=0.10, EFICIENCIA=0.70;   // no curto prazo corta-se no máximo 10%, e só ~70% vira economia real
+  shop.expenses.forEach((e,i)=>{const corte=e.operating*CORTE_MAX; expenses[i]-=corte*EFICIENCIA; fee+=corte*(1-EFICIENCIA);});
+ }
  if(action==='advance') {
   let remaining=Math.max(0,Number(options.advance??3000));
   for(let i=1;i<days&&remaining>0;i++) {const amount=Math.min(remaining,receivables[i]);receivables[i]-=amount;advanced+=amount;fee+=amount*.025*(i/30);remaining-=amount;}
@@ -82,12 +90,12 @@ function recommend(shop,data,options={}){
  if(mode==='saudavel'||probNeg<0.20)
   return pack('none',{},base,0,{justificativa:`O risco de faltar caixa nos próximos ${H} dias é baixo (${Math.round(probNeg*100)}%). Não é preciso agir agora — o sistema segue acompanhando e reavalia se o cenário mudar.`});
  // 2. margem: nunca antecipação/crédito; alavanca operacional
- if(mode==='margem')
-  return pack('reduce',{},simulate(shop,data,{...options,action:'reduce'}),0,{structural:true,
-   justificativa:`O problema é de margem: no período as saídas superam as entradas. Antecipar ou tomar crédito não resolve — só adia com custo, porque no período seguinte o buraco volta maior e sem recebível para vender. Comece cortando gastos e revendo preço e mix; sozinho isso ameniza, mas o ajuste é estrutural.`});
+ if(mode==='margem'){const rr=simulate(shop,data,{...options,action:'reduce'});
+  return pack('reduce',{},rr,rr.fee,{structural:true,
+   justificativa:`O problema é de margem: no período as saídas superam as entradas. Antecipar ou tomar crédito não resolve — só adia com custo, porque no período seguinte o buraco volta maior e sem recebível para vender. Comece cortando gastos e revendo preço e mix; sozinho isso ameniza, mas o ajuste é estrutural.`});}
  // 3/4. timing: menor custo que cobre com margem; custo nunca acima do buraco
  const cand=[];
- for(const action of ['negotiate','reduce'])cand.push({action,params:{},r:simulate(shop,data,{...options,action}),cost:0});
+ for(const action of ['negotiate','reduce']){const r=simulate(shop,data,{...options,action});cand.push({action,params:{},r,cost:r.fee});}
  // menor antecipação que cobre o buraco, limitada a 1,5× o buraco: antecipar muito além do
  // necessário esvazia o caixa dos meses seguintes, que é o que o desafio pede para evitar.
  const capAdv=Math.floor(1.5*buraco*100)/100;
