@@ -280,18 +280,45 @@
   function renderSimulator() {
     $('pixValue').textContent = `${$('pixRange').value}%`;
     $('installmentsValue').textContent = `${options().maxInstall}×`;
-    const renderAdjustment = (target, params) => {
-      const items = evaluate(params);
-      const base = items.find(item => item.action === 'none');
-      const mix = items.find(item => item.action === 'mix');
-      const delta = mix ? improvement(mix, base) : null;
-      const [label, value] = changeLabel(delta);
-      $(target).innerHTML = mix
-        ? `<span>${label}: <strong>${value}</strong></span><span>Custo estimado: <strong>${money(actionCost(mix))}</strong></span>${delta !== null && delta <= 0.01 ? `<small>${escapeHtml(noHelpReason('mix', params))}</small>` : ''}`
-        : '<span>Não foi possível comparar este ajuste agora.</span>';
+    const days = Math.min(state.horizon, state.data?.dates?.length ?? 0, state.shop?.forecast?.length ?? 0,
+      state.shop?.expenses?.length ?? 0, state.shop?.receivables?.length ?? 0);
+    const unavailable = '<span>Não foi possível comparar este ajuste agora.</span>';
+    if (!days || typeof simulate !== 'function') {
+      $('installmentsResult').innerHTML = unavailable;
+      $('pixResult').innerHTML = unavailable;
+      return;
+    }
+    // O motor calcula pelo tamanho das séries recebidas; o recorte mantém a comparação no período escolhido.
+    const periodShop = { ...state.shop, forecast: state.shop.forecast.slice(0, days),
+      expenses: state.shop.expenses.slice(0, days), receivables: state.shop.receivables.slice(0, days) };
+    const periodData = { ...state.data, dates: state.data.dates.slice(0, days) };
+    const difference = delta => Math.abs(delta) < 0.01 ? 'Praticamente igual'
+      : `${money(Math.abs(delta))} ${delta > 0 ? 'a mais' : 'a menos'}`;
+    const renderAdjustment = (target, base, changed, pix) => {
+      const minDelta = changed.min - base.min;
+      const endDelta = changed.end - base.end;
+      const tightest = Math.abs(minDelta) < 0.01
+        ? 'Nesse momento, o saldo ficaria praticamente igual.'
+        : `Nesse momento, você teria ${difference(minDelta)} em caixa.`;
+      $(target).innerHTML = `
+        <div class="result-block"><span>Quando o caixa mais aperta</span><strong>${tightest}</strong></div>
+        <div class="result-block"><span>Saldo ao fim de ${days} dias</span>
+          <div class="result-pair"><span>Sem a mudança: <strong>${money(base.end)}</strong></span><span>Com a mudança: <strong>${money(changed.end)}</strong></span></div>
+          <strong>${difference(endDelta)} ao fim do período</strong></div>
+        ${pix ? `<div class="result-block"><span>Total oferecido em descontos no Pix</span><strong>${money(changed.fee)}</strong><small>É o valor que deixa de entrar pelas vendas com o desconto testado.</small></div>` : ''}
+        <small>Valores simulados para os próximos ${days} dias; o resultado real pode variar.</small>`;
     };
-    renderAdjustment('installmentsResult', { pixDiscount: 0, maxInstall: options().maxInstall });
-    renderAdjustment('pixResult', { pixDiscount: options().pixDiscount, maxInstall: 3 });
+    try {
+      const base = simulate(periodShop, periodData, { action: 'none' });
+      const installments = simulate(periodShop, periodData, { action: 'mix', pixDiscount: 0, maxInstall: options().maxInstall });
+      const pix = simulate(periodShop, periodData, { action: 'mix', pixDiscount: options().pixDiscount, maxInstall: 3 });
+      renderAdjustment('installmentsResult', base, installments, false);
+      renderAdjustment('pixResult', base, pix, true);
+    } catch (error) {
+      console.error('Não foi possível simular os ajustes:', error);
+      $('installmentsResult').innerHTML = unavailable;
+      $('pixResult').innerHTML = unavailable;
+    }
   }
   function renderAll() {
     state.recommendation = getRecommendation();
