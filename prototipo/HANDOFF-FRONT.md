@@ -6,7 +6,7 @@ Atualizado em **16/09/2026**. Este registro pertence apenas à interface em `pro
 
 O front inicial foi integrado à `main` pelo PR #1. Desde então o back-end acrescentou a ação `mix`: `evaluateActions()` aceita `pixDiscount` (0 a 6%) e `maxInstall` (3, 4, 6 ou 12 parcelas) nessa ação. O front agora envia esses nomes e valores corretos e atualiza custo e projeções determinísticas ao mover os controles. A migração de vendas para Pix é uma **hipótese de elasticidade**, não uma previsão causal comprovada; o desconto tem custo. As bandas probabilísticas continuam representando o cenário base, sem recálculo por ajuste.
 
-O motor também expõe `recommend()`, que seleciona uma ação. A apresentação futura de exatamente três opções por níveis de custo precisa de um contrato do back-end que classifique alternativas elegíveis, custos e cobertura por nível. O front não inventa opções nem oferece antecipação em diagnóstico de margem.
+O front agora chama `recommend(shop, data, {horizon})` para destacar a ação escolhida pelo motor, com `params`, custo, cobertura, impacto no dia 30 e justificativa integral. `evaluateActions()` produz os cinco cenários secundários. Em margem, antecipação aparece apenas para comparação, com aviso de que o motor nunca a recomenda; a redução destacada é marcada como medida parcial e estrutural. A apresentação futura de exatamente três opções por níveis de custo ainda precisa de um contrato do back-end.
 
 ## Escopo entregue
 
@@ -14,7 +14,8 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 - Notificação interna simulada que leva à aba Antecipa; pode ser repetida pelo botão do sino.
 - Seletor de negócio, horizontes de 30 e 60 dias (60 padrão), gráfico SVG simplificado com linha central, uma faixa de 95%, zero e marcador de data de risco quando há problema.
 - Situação do negócio baseada em `uncertainty.horizons`: saudável, timing ou margem, com probabilidades e valor mediano do déficit quando informado.
-- Alternativas produzidas por `evaluateActions()`, incluindo não fazer nada, ordenadas por custo direto estimado. Como medida prudencial no front, só entram na lista ações que melhoram o pior saldo e não custam mais que o déficit determinístico; o simulador ainda mostra o efeito e o custo da ação de mix fora da lista. Em diagnóstico de margem, antecipação e ajuste do mix não aparecem como solução estrutural; o simulador explica o limite do mix. Em cenário saudável, alternativas e simulador ficam ocultos.
+- Recomendação do motor acima de cinco cartões de comparação produzidos por `evaluateActions()`, incluindo não fazer nada. Os cartões mostram melhora, piora ou ausência de mudança sem esconder valores negativos. A ação escolhida é identificada na comparação. O desconto no Pix e a antecipação partem dos parâmetros retornados por `recommend()` quando disponíveis; nas demais ações, usam hipóteses ilustrativas declaradas. Os sliders manuais não alteram a recomendação. Em cenário saudável, ficam só a orientação de acompanhamento e a previsão.
+- Painel recolhível "Como a previsão foi calculada" com `uncertainty.method`, as três principais variáveis em `importance` (sem inferir causalidade) e `metrics.mae` versus `baselineMae` quando há teste. `coldStart` mostra aviso de pouco histórico e ausência de validação independente. `firstNegativeDay: null` recebe explicação legível.
 - Página de detalhe de cada alternativa com funcionamento, custo, mudança no pior saldo e efeito no saldo final de 60 dias.
 - Controles de desconto no Pix e parcelamento máximo conectados à ação `mix` do motor atual, com custo e melhora do pior saldo exibidos no simulador e aviso de que as faixas do gráfico continuam no cenário base.
 - Cabeçalho azul, filtros arredondados e cartões claros inspirados na referência visual do app Cielo; as outras áreas seguem abstratas e não reproduzem telas oficiais.
@@ -35,7 +36,7 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 ## Contratos lidos
 
 - `../dist/data.json`: `shops`, `dates`, `uncertainty.quantiles`, `uncertainty.horizons`.
-- `../dist/engine.js`: `evaluateActions(shop, data, options)`; a interface renderiza o retorno em vez de fixar a lista de ações.
+- `../dist/engine.js`: `recommend(shop, data, {horizon})` para a escolha e `evaluateActions(shop, data, options)` para comparação. O motor não fornece `how`/`caution`; os textos das cinco ações ficam em `app.js`.
 - `../HANDOFF.md`: limites financeiros e distinção entre protótipo e produto real.
 
 ## Verificações executadas
@@ -46,6 +47,7 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 - Mercado Bom Preço selecionado no navegador: diagnóstico de margem exibido, antecipação não listada e explicação presente.
 - Tela de detalhes da antecipação aberta no cenário de timing, com efeitos e limites exibidos.
 - Na revisão atual: `node --check prototipo/app.js` e `node work/test_engine.js` passaram com o motor atualizado. Prévia aberta no navegador: cabeçalho azul e gráfico simplificado; Café Primeiro Passo mostrou cenário positivo sem soluções, simulador ou aviso antigo; Bar do Léo recalculou a ação de mix ao usar 3% de desconto no Pix (custo estimado R$ 3.804) e alertou que o custo superava o déficit; Mercado Bom Preço mostrou margem e não listou antecipação nem mix como soluções.
+- Revisão da API em 16/09/2026: `node --check prototipo/app.js`, `node work/test_engine.js` e prévia no navegador passaram. Bar do Léo (60 dias): mix de 0,5% no Pix destacado e antecipação ilustrativa mostrada como piora de R$ 0,42; Mercado Bom Preço: redução de gastos destacada com alerta estrutural, antecipação apenas comparativa; Café Primeiro Passo: aviso de pouco histórico, sem cartões de solução; Linha & Cor (30 dias): `firstNegativeDay: null` explicado sem mostrar `null`, e painel exibe MAE e variáveis de importância. A base atual classifica margem em 100% dos cenários do Mercado Bom Preço.
 
 ## Pendências e limites
 
@@ -53,9 +55,7 @@ O motor também expõe `recommend()`, que seleciona uma ação. A apresentação
 - Os detalhes conhecidos de ações têm textos específicos; novas ações do motor usam apresentação genérica até a equipe definir sua explicação operacional.
 - A demonstração não aplica ações nem guarda planos. Não há push real, chatbot ou integração com o aplicativo Cielo.
 - O cálculo das alternativas é determinístico; as bandas probabilísticas são do cenário base. A interface avisa essa distinção.
-- O diagnóstico de margem pode resultar em menos de três medidas recomendadas até que o back forneça alternativas adicionais adequadas.
-- Exatamente três recomendações por níveis de custo ainda não têm contrato no motor. A lista atual é dinâmica a partir de `evaluateActions()`, mas pode ter mais ou menos opções e não se apresenta como escada rígida de três níveis.
-- O filtro de custo e melhora da interface é provisório e determinístico. Substituir por elegibilidade e níveis de custo definidos no contrato do back-end; uma alternativa individual pode não cobrir todo o déficit.
+- Exatamente três recomendações por níveis de custo ainda não têm contrato no motor. A interface mostra uma ação escolhida por `recommend()` e cinco cenários comparativos; estes não são cinco recomendações.
 - Comparação das alternativas e "Plano da sessão" referem-se ao período de 60 dias calculado por `evaluateActions()`, inclusive quando o gráfico está em 30 dias. A interface indica esse período nos textos; alinhar ambos quando o contrato do motor aceitar horizonte nas alternativas.
 - O bloco de explicação usa o diagnóstico, sua frequência e a data do risco; ainda não há atribuição verificável dos fatores que causaram a previsão. Isso requer dados explicativos do motor, e a interface não deve atribuir causas específicas sem eles.
 - O plano é um roteiro visual, sem persistência ou execução. A consulta via chatbot, push real, oferta de crédito/CET e integração nativa com o app Cielo seguem como visão de produto do documento executivo.
