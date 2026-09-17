@@ -1,6 +1,30 @@
 # Handoff do front — Antecipa
 
-Atualizado em **16/09/2026**. Este registro pertence apenas à interface em `prototipo/`; o handoff da raiz é mantido pelo trabalho geral e pelo back-end.
+Atualizado em **17/09/2026**. Este registro pertence apenas à interface em `prototipo/`; o handoff da raiz é mantido pelo trabalho geral e pelo back-end.
+
+## Estado atual: campanhas comerciais para a mentoria
+
+- O gráfico **Como o caixa pode mudar** enquadra a duração da campanha e mais sete dias, para aproximar as linhas quando o efeito é pequeno. O recorte é declarado sob o gráfico, o eixo continua incluindo R$ 0 e a maior diferença entre as curvas no recorte aparece em reais. Os valores ao fim do horizonte continuam calculados sobre todos os 30 ou 60 dias.
+- Em 17/09, a pedido do usuário, a campanha saiu da área logo abaixo da sugestão principal e passou para depois dos cartões de comparação. A ordem dos blocos de teste agora é campanha, Pix e parcelas. O resumo da campanha não mostra gráfico; **Entender esta campanha** abre o único gráfico comercial, **Como o caixa pode mudar**. O gráfico de diferença diária foi removido. O rótulo técnico de margem foi trocado por **resultado após custos dos produtos**.
+- A apresentação oferece somente **Bar do Léo** e **Linha & Cor** no seletor. Mercadinho e Café Primeiro Passo continuam em `dist/data.json` para testes do motor; nada foi removido da base.
+- A interface chama `evaluatePromotion(shop, data, { horizon })` e `evaluateActions()` com `includePromotion: true` para integrar a sexta ação. `recommend()` continua sendo a única fonte da escolha principal. Uma campanha elegível é identificada como **campanha calculada** quando outra ação venceu, ou como **escolha da análise** somente se `recommend().action === 'promotion'`.
+- O bar apresenta combo de produtos e a loja apresenta liquidação da coleção anterior com nomes concretos devolvidos pelo motor. O bloco comercial exibe duração, desconto, entrada no horizonte, melhora do menor saldo, resultado após custos dos produtos e estoque estimado. `promotion.series` alimenta as curvas sem/com campanha apenas na tela de detalhes. A área de candidatos fica recolhida.
+- A tela de detalhes permite trocar o candidato e testar descontos de 0% a 50% por `evaluatePromotion()`. Quando elegível, `simulate(shop, data, { action: 'promotion', ...promotion.params })` confirma o saldo final exibido. Campanhas inelegíveis recebem motivo de recusa e não apresentam roteiro para realizar a ação. Nenhuma campanha é criada ou contratada.
+- O custo mostrado na sugestão principal usa a mesma comparação recortada para 30 ou 60 dias dos cartões quando a medida não é uma campanha; os demais campos e a escolha principal continuam vindo de `recommend()`.
+- As séries das campanhas são estimativas pontuais. A faixa de incerteza do gráfico principal continua exclusiva do cenário-base; o front diz expressamente que ela não foi recalculada. Produtos, preços, estoque e comportamento dos clientes continuam identificados como sintéticos.
+- Foram editados apenas `prototipo/index.html`, `prototipo/app.js`, `prototipo/style.css`, `prototipo/LEIA-ME.md` e este `prototipo/HANDOFF-FRONT.md`. `dist/` e demais pastas foram atualizados por `git pull --rebase` antes do trabalho, mas não editados nesta integração.
+
+### Verificação desta integração
+
+- `node --check prototipo/app.js`, `node work/test_engine.js` e `git diff --check` passaram.
+- Prévia local em `http://127.0.0.1:8765/prototipo/`: bar em 30 e 60 dias mostrou combo concreto, melhora e distinção da recomendação principal; Linha & Cor em 30 dias permaneceu saudável e mostrou ganho pequeno da liquidação sem apresentá-la como necessária; em 60 dias mostrou melhora parcial e manteve outra medida como escolha principal.
+- Na tela de detalhes do bar, descontos de 0% e 50% foram recusados com motivo legível e sem roteiro para realizar a campanha. O bloco da campanha e o gráfico foram conferidos na moldura móvel.
+
+### Limites que permanecem
+
+- O front não verifica demanda, margem ou estoque com dados reais; depende das hipóteses e dos valores sintéticos do motor. Campanha calculada não é promessa de venda nem de saldo futuro.
+- Com a API atual, `recommend()` pode devolver o custo da redução de gastos sobre 60 dias mesmo quando solicitado o horizonte de 30 dias (R$ 376 versus R$ 188 no Bar do Léo). O front usa o custo recalculado para o período exibido; o contrato do motor ainda deve ser harmonizado para clientes futuros da API.
+- Casos de estoque insuficiente são testados pelo motor. Na interface, a mesma apresentação neutra de recusa foi verificada com descontos inviáveis; não há um negócio da demonstração com estoque insuficiente para reproduzir esse caso visualmente sem alterar dados de teste.
 
 ## Estado da integração com o motor
 
