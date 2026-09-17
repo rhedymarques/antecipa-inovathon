@@ -28,6 +28,19 @@
 - As hipóteses de economia não incluem impacto negativo em vendas; renegociação depende de aceite do fornecedor; taxas de antecipação são fictícias.
 - Ninguém é contatado, nenhuma conta é conectada e nenhuma contratação é realizada. O plano desaparece ao recarregar a página.
 
+## Promoções específicas para os dois casos da apresentação
+
+- **Bar do Léo:** o motor forma candidatos de combo combinando uma bebida e um petisco.
+- **Linha & Cor:** o motor avalia peças isoladas e a liquidação conjunta da coleção anterior.
+- A seleção considera giro recente, estoque excedente ao que já venderia, margem, desconto,
+  adesão, canibalização, prazo de liquidação do meio de pagamento e o dia do aperto de caixa.
+- Somente o incremento líquido entra na curva. Vendas normais permanecem na previsão agregada;
+  o desconto concedido sobre vendas que já aconteceriam é subtraído, evitando dupla contagem.
+- O custo contábil do estoque já comprado reduz a margem e o estoque remanescente, mas não é
+  registrado novamente como pagamento. Reposição futura está fora do escopo.
+- Todos os parâmetros por produto são sintéticos e arbitrados para demonstração. A estimativa
+  da promoção é pontual; as faixas do Monte Carlo continuam representando apenas o cenário-base.
+
 ## Roteiro curto da demonstração
 
 1. Comece em “somente pagamentos”: o sistema sabe prever entradas, mas reconhece o que falta.

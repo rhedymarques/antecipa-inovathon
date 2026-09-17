@@ -1,4 +1,4 @@
-const assert=require('assert');const fs=require('fs');const {simulate,financialSnapshot,evaluateActions,diagnose,recommend}=require('../dist/engine.js');const data=JSON.parse(fs.readFileSync('dist/data.json','utf8'));
+const assert=require('assert');const fs=require('fs');const {simulate,financialSnapshot,evaluateActions,evaluatePromotion,diagnose,recommend}=require('../dist/engine.js');const data=JSON.parse(fs.readFileSync('dist/data.json','utf8'));
 const near=(a,b,tol=1e-5)=>assert(Math.abs(a-b)<tol,`${a} != ${b}`);
 const Q=['q2_5','q5','q25','q50','q75','q95','q97_5'];
 for(const shop of data.shops){
@@ -18,7 +18,26 @@ for(const shop of data.shops){
  assert(simulate(shop,data,{action:'mix',pixDiscount:6,maxInstall:bp}).fee>0,'desconto no Pix deveria ter custo');
  assert(simulate(shop,data,{action:'mix',pixDiscount:0,maxInstall:2}).fee>0,'reduzir parcelamento deveria ter custo de volume');
  for(const scenario of [base,advance,negotiate,reduce,mix]){let previous=shop.balance;for(const d of scenario.daily){near(d.balance,previous+d.existing+d.newSales-d.expense);assert(Number.isFinite(d.balance));previous=d.balance;}}
- const f=financialSnapshot(shop,shop.balance,20);near(f.ncg,shop.finance.stock+shop.receivables.reduce((a,b)=>a+b,0)+(shop.receivablesBeyondWindow??0)+shop.finance.otherReceivables-shop.finance.operatingLiabilities);near(f.st,shop.balance-shop.finance.financialDebt);near(f.incremental,Math.max(0,f.ncg)*.2);assert(evaluateActions(shop,data).length===5);
+ const f=financialSnapshot(shop,shop.balance,20);near(f.ncg,shop.finance.stock+shop.receivables.reduce((a,b)=>a+b,0)+(shop.receivablesBeyondWindow??0)+shop.finance.otherReceivables-shop.finance.operatingLiabilities);near(f.st,shop.balance-shop.finance.financialDebt);near(f.incremental,Math.max(0,f.ncg)*.2);
+ assert(evaluateActions(shop,data).length===5,'contrato legado deve preservar cinco ações');
+ assert(evaluateActions(shop,data,{includePromotion:true}).length===(shop.commercial?6:5));
+ if(shop.commercial){
+  const catalogCost=shop.commercial.products.reduce((s,p)=>s+p.cost*p.stock,0);
+  assert(catalogCost<=shop.finance.stock+1e-8,'custo do recorte de produtos não pode exceder o estoque contábil total');
+  for(const H of [30,60]){const promo=evaluatePromotion(shop,data,{horizon:H});
+   assert(promo.action==='promotion'&&promo.params.horizon===H&&promo.series.length===H);
+   assert(promo.uncertainty.recalculated===false&&promo.cautions.some(x=>x.includes('faixa probabilística')));
+   assert(Array.isArray(promo.products)&&promo.products.length>0&&promo.products.every(p=>p.stockConsumed<=p.stockAvailable+1e-8&&p.stockRemaining>=-1e-8));
+   if(promo.eligible){assert(promo.improvement>0&&promo.totals.marginImpact>0);const pr=simulate(shop,data,{action:'promotion',...promo.params});
+    near(pr.daily[H-1].balance,promo.end);near(pr.daily.slice(0,H).reduce((s,d)=>s+d.promotionNet,0),promo.totals.cashInHorizon,0.02);
+    let previous=shop.balance;for(let i=0;i<pr.daily.length;i++){const d=pr.daily[i];near(d.balance,previous+d.existing+d.newSales-d.expense);near(d.newSales-base.daily[i].newSales,d.promotionNet);previous=d.balance;}}
+  }
+  const refused=evaluatePromotion(shop,data,{horizon:60,discountPct:50});
+  assert(!refused.eligible,'desconto extremo deveria ser recusado por margem/efeito incremental');
+  assert(!evaluatePromotion(shop,data,{horizon:60,discountPct:0}).eligible,'sem desconto/efeito incremental a promoção deve ser recusada');
+  const noStock=structuredClone(shop);noStock.commercial.products.forEach(p=>p.stock=0);
+  assert(!evaluatePromotion(noStock,data,{horizon:60}).eligible,'promoção sem estoque deve ser recusada');
+ }
  if(shop.coldStart){assert(shop.history.length===14);assert(shop.metrics===null);assert(shop.peerCount===18);}
  // Diagnóstico timing vs margem (Tarefa 3)
  assert(['margem','timing','saudavel'].includes(diagnose(shop,data)),'diagnose inválido');
@@ -37,7 +56,7 @@ for(const shop of data.shops){
  }
  // recommend(): escolhe uma alternativa; antecipação recomendada nunca excede 1,5× o buraco
  for(const H of [30,60]){const rec=recommend(shop,data,{horizon:H});
-  assert(['none','negotiate','reduce','advance','mix'].includes(rec.action));
+  assert(['none','negotiate','reduce','advance','mix','promotion'].includes(rec.action));
   assert(rec.cost<=rec.buraco+1,`${shop.id}: custo recomendado (${rec.cost}) excede o buraco (${rec.buraco})`);
   if(rec.mode==='margem')assert(!['advance','credit'].includes(rec.action),`${shop.id}: modo MARGEM não pode recomendar antecipação ou crédito`);
   if(rec.action==='advance'){
@@ -95,4 +114,12 @@ const vbase=Math.min(...simulate(vest,data).daily.map(d=>d.balance));
 const vred=Math.min(...simulate(vest,data,{action:'mix',pixDiscount:0,maxInstall:2}).daily.map(d=>d.balance));
 assert(vred>=vbase,'reduzir o parcelamento não deve piorar o pior saldo do vestuário');
 for(const s of data.shops){const pr=recommend(s,data,{horizon:60});if(pr.action==='mix')assert(pr.params.maxInstall<=(s.installments??4),'recommend só reduz ou mantém o parcelamento, nunca aumenta');}
-console.log('PASS: conservação de caixa, antecipação mínima, teto, reprodução, veto de margem, regra dos 50%, renegociação, redução, choques, diagnóstico e Monte Carlo.');
+// Caminho positivo da integração: numa hipótese conservadora sem canibalização, o combo
+// de 5% compete e pode ser escolhido. Os dados oficiais mantêm a hipótese mais prudente.
+const promoFixture=structuredClone(data.shops.find(s=>s.id==='bar'));
+promoFixture.balance=9900;promoFixture.commercial.assumptions.discountGridPct=[5];promoFixture.commercial.assumptions.cannibalizationRate=0;
+const promoRec=recommend(promoFixture,data,{horizon:60});
+assert(promoRec.action==='promotion'&&promoRec.promotion?.eligible,'recommend deve conseguir escolher uma promoção elegível');
+const promoApplied=simulate(promoFixture,data,{action:'promotion',...promoRec.params});
+assert(promoApplied.min>simulate(promoFixture,data).min&&promoRec.cost<=promoRec.buraco);
+console.log('PASS: conservação de caixa, antecipação mínima, teto, promoções, estoque, descontos extremos, dupla contagem, veto de margem, regra dos 50%, choques, diagnóstico e Monte Carlo.');

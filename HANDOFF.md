@@ -1,6 +1,6 @@
 # Handoff — Antecipa / Copiloto de Caixa
 
-Estado verificado em **16/09/2026** para o II Inovathon SemAd 2026, desafio Cielo “Inteligência de Caixa para PMEs”.
+Estado verificado em **17/09/2026** para o II Inovathon SemAd 2026, desafio Cielo “Inteligência de Caixa para PMEs”.
 
 ## Objetivo e tese
 
@@ -46,12 +46,12 @@ O treino sobrescreve `dist/data.json` e `dist/pagamentos_sinteticos.csv`, chama 
 
 | Camada | Implementação atual |
 |---|---|
-| Dados | 620 dias sintéticos com semente 42, referência fixa em 15/09/2026 e mix de pagamentos variável por dia |
+| Dados | 620 dias sintéticos com semente 42, referência fixa em 15/09/2026 e mix de pagamentos variável por dia; bar e roupas têm ainda 90 dias de unidades por SKU, com sementes 4201/4202 |
 | Previsão | Random Forest de vendas diárias, 100 árvores, holdout temporal de 60 dias sem sobreposição de alvos e comparação com baseline |
 | Incerteza | 2.000 cenários; recebíveis já contratados e contas conhecidas ficam fixos; vendas, mix e chargeback hipotético variam |
 | Caixa | Saldo inicial + recebíveis existentes + liquidação de vendas previstas − saídas informadas |
 | Diagnóstico | `diagnose()` separa TIMING, MARGEM e SAUDÁVEL; o diagnóstico probabilístico é calculado dentro de cada cenário |
-| Recomendação | `recommend()` escolhe entre não agir, negociar fornecedor, reduzir gastos variáveis, antecipar recebíveis e ajustar o mix |
+| Recomendação | `recommend()` escolhe entre não agir, negociar fornecedor, reduzir gastos variáveis, antecipar recebíveis, ajustar o mix e, quando elegível, promoção comercial por produto |
 | Interface | Dashboard responsivo em `dist/`, horizontes de 30/60 dias, faixas de incerteza, comparação, plano da sessão e exportação de CSV |
 | Dados incompletos | Modo somente pagamentos não calcula caixa, risco, recomendação ou capital de giro sem saldo e saídas |
 
@@ -61,6 +61,10 @@ Os casos demonstrativos atuais são:
 - **Linha & Cor:** saudável em 30 dias e TIMING em 60; no cenário-base de 60 dias, buraco aproximado de R$ 25,9 mil.
 - **Mercado Bom Preço:** diagnóstico predominante de MARGEM; a redução simulada cobre somente parte do buraco e a tela diz que o ajuste é estrutural.
 - **Café Primeiro Passo:** somente 14 dias próprios; usa um modelo separado baseado em 18 empresas sintéticas semelhantes e ainda não possui teste independente.
+
+Para a apresentação orientada pela mentoria, o front deve mostrar somente **Bar do Léo**
+e **Linha & Cor**. Mercadinho e café permanecem como casos técnicos de regressão e não
+precisam entrar no pitch.
 
 Os valores acima são saídas do cenário-base determinístico. As probabilidades e faixas exibidas vêm dos 2.000 cenários e devem ser apresentadas como incerteza, nunca como certeza.
 
@@ -76,7 +80,16 @@ Para TIMING, as alternativas que atingem uma margem de segurança de 20% são co
 
 Em MARGEM, `recommend()` nunca retorna antecipação ou crédito. “Não fazer nada” permanece disponível para comparação. O controle de antecipação continua livre para exploração manual, sem contratar ou executar nada.
 
-Com os dados atuais em 60 dias, as recomendações reproduzidas são: Bar do Léo, desconto de 0,5% no Pix; Linha & Cor, desconto de 4% no Pix; Mercado Bom Preço, redução de gastos com aviso explícito de cobertura parcial. Taxas, elasticidade e custos são hipóteses de demonstração.
+A promoção comercial compete com as demais alternativas somente quando possui estoque,
+margem incremental positiva e melhora o caixa dentro do horizonte. O cálculo subtrai
+desconto sobre unidades que já venderiam e canibalização de outras compras. O custo do
+estoque já adquirido afeta margem e estoque, mas não é lançado novamente como saída de
+caixa. Em diagnóstico de MARGEM a promoção não é recomendada como solução isolada.
+
+Com os dados atuais em 60 dias, as recomendações reproduzidas são: Bar do Léo,
+redução de gastos com cobertura parcial; Linha & Cor, ajuste de mix com desconto de 6%
+no Pix e parcelamento em 2x, também parcial; Mercado Bom Preço, redução de gastos com
+aviso de ajuste estrutural. Taxas, elasticidade e custos são hipóteses de demonstração.
 
 ## O que é sintético ou hipotético
 
@@ -88,6 +101,49 @@ Com os dados atuais em 60 dias, as recomendações reproduzidas são: Bar do Lé
 - A adquirente enxerga entradas sob sua operação; uma visão real de saídas exigiria informação do lojista ou Open Finance com consentimento e conciliação.
 - Reduzir gastos sem afetar vendas e adiar fornecedor por sete dias sem multa são hipóteses, não promessas.
 - Importância de variáveis não representa causalidade.
+- Preços, custos, estoques, giro por SKU, adesão, elasticidade ao desconto e canibalização
+  das promoções são hipóteses sintéticas. Não foram calibrados com clientes da Cielo.
+- O efeito da promoção é uma estimativa pontual; a faixa probabilística do cenário-base
+  não foi recalculada e não deve ser apresentada como incerteza da campanha.
+
+## Contrato da promoção para o front
+
+Função pública:
+
+```js
+evaluatePromotion(shop, data, {
+  horizon: 30 | 60,
+  promotionId: "opcional",
+  discountPct: 20 // opcional; sem ele o motor testa a grade declarada
+})
+```
+
+O retorno contém `eligible`, `reason`, `proposal`, `params`, `products`, `assumptions`,
+`cautions`, `min`, `end`, `fee`, `improvement`, `totals`, `stockConsumed`,
+`stockRemaining`, `uncertainty`, `series` e `candidates`. Cada ponto de `series` contém
+`date`, `withoutAction`, `withAction` e `promotionNet`. Para preservar o front atual,
+`evaluateActions()` inclui a sexta ação, `promotion`, somente quando chamado com
+`includePromotion: true` e quando o negócio possui catálogo. `recommend()` já a considera
+e pode retorná-la com os mesmos `params` dimensionados.
+
+Exemplo reproduzido do Bar do Léo em 60 dias:
+
+```json
+{
+  "eligible": true,
+  "proposal": "Combo Cerveja 600 ml + Porção de batata rústica com 15% de desconto",
+  "params": {"promotionId": "combo_cerveja_600_batata_rustica", "discountPct": 15, "horizon": 60},
+  "improvement": 457.02,
+  "fee": 621.79,
+  "totals": {"cashInHorizon": 1195.07, "marginImpact": 333.92}
+}
+```
+
+Nesse caso a ação é útil, mas `recommend()` não a escolhe: seu custo econômico estimado
+é maior que o buraco de aproximadamente R$ 502. Isso demonstra uma promoção calculada
+e também a recusa responsável de empurrá-la. A Linha & Cor recebe a proposta de liquidação
+da coleção anterior; em 60 dias ela melhora o maior aperto em cerca de R$ 1.853, mas não
+resolve sozinha o déficit severo.
 
 ## O que ficou de fora
 
@@ -108,6 +164,7 @@ Com os dados atuais em 60 dias, as recomendações reproduzidas são: Bar do Lé
 | `dist/engine.js` | Simulação, diagnóstico, ações e recomendação |
 | `dist/data.json` | Dados sintéticos, previsões e incerteza consumidos pela página |
 | `gerar_base_ficticia.py` | Geração reproduzível da base sintética |
+| `dados_ficticios/produtos_por_dia.csv` | Histórico sintético de unidades por SKU elegível no bar e em roupas |
 | `work/train_model.py` | Treino, holdout temporal, baseline e exportação |
 | `work/montecarlo.py` | Simulação dos 2.000 cenários |
 | `work/enrich_model.py` | Caso de pouco histórico e informações financeiras complementares |
@@ -116,14 +173,19 @@ Com os dados atuais em 60 dias, as recomendações reproduzidas são: Bar do Lé
 
 ## Verificações desta revisão
 
-Executados com sucesso em 16/09/2026:
+Executados com sucesso em 17/09/2026:
 
-- `node work/test_engine.js`, incluindo conservação do caixa, antecipação mínima, teto de 1,5 vez, reprodução do valor recomendado, custo limitado ao buraco e veto de antecipação/crédito em MARGEM;
+- `node work/test_engine.js`, incluindo conservação do caixa, antecipação mínima, teto de 1,5 vez, reprodução do valor recomendado, custo limitado ao buraco, veto de antecipação/crédito em MARGEM e promoções em 30/60 dias;
+- testes de desconto 0% e 50%, estoque insuficiente, limite de unidades, margem positiva, série diária, recebimentos e ausência de dupla contagem;
 - `node --check` em `dist/engine.js`, `dist/app.js` e `dist/features.js`;
-- `python work/train_model.py` com NumPy 2.3.5 e scikit-learn 1.9.1;
+- `python gerar_base_ficticia.py` e `python work/train_model.py`;
 - leitura e validação estrutural do JSON regenerado.
 
-O treino completo terminou sem erro e reproduziu os arquivos versionados, sem diferença em `dist/data.json` ou `dist/pagamentos_sinteticos.csv`. O JSON resultante registra referência 15/09/2026, semente 42, indicador sintético, quatro casos, horizonte de 60 dias e 2.000 cenários por caso.
+O treino completo terminou sem erro. O JSON resultante registra referência 15/09/2026,
+semente 42, indicador sintético, quatro casos, horizonte de 60 dias e 2.000 cenários
+por caso, além do catálogo demonstrativo com sementes 4201/4202 para os dois setores.
+O front em `prototipo/` ainda não foi alterado; sua próxima integração deve consumir o
+contrato acima e decidir como apresentar a sexta ação.
 
 ## Estado da entrega
 

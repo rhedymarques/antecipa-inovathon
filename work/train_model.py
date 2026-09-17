@@ -126,7 +126,8 @@ for chave, perfil in perfis['negocios'].items():
                'history': [{'date': dates[i].isoformat(), 'sales': float(y[i])} for i in range(N - 90, N)],
                'forecast': forecast.tolist(), 'receivables': receb_fut[chave].round(2).tolist(),
                'expenses': expenses, 'metrics': metrics, 'uncertainty': uncertainty, 'diagnosis': diagnosis,
-               'importance': sorted([{'name': n, 'value': round(float(v), 4)} for n, v in zip(names, model.feature_importances_)], key=lambda a: -a['value'])})
+               'importance': sorted([{'name': n, 'value': round(float(v), 4)} for n, v in zip(names, model.feature_importances_)], key=lambda a: -a['value']),
+               'commercial': perfil.get('commercial')})
  resumo[chave] = metrics
 
 data = {'asof': ASOF.isoformat(), 'dates': future, 'seed': base.SEMENTE, 'synthetic': True,

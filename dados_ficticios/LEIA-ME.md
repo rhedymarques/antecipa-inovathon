@@ -7,6 +7,11 @@ são hipóteses de demonstração, não condições contratuais da empresa.
 Para recriar tudo do zero: `python gerar_base_ficticia.py` (semente fixa 42, resultado
 sempre idêntico).
 
+Os históricos de produtos usados nas promoções têm RNGs separados: semente 4201
+para o bar e 4202 para a loja de roupas. Preços, custos, estoques, giro, adesão,
+elasticidade ao desconto e canibalização são hipóteses sintéticas de demonstração.
+Não foram calibrados com clientes da Cielo e exigiriam validação com lojistas ou ERP.
+
 ---
 
 ## Os três negócios
@@ -78,6 +83,19 @@ Quando o dinheiro sai, com a data de vencimento.
 Este é o lado que a adquirente **não** enxerga hoje. No produto, viria do lojista ou de
 Open Finance com consentimento.
 
+### `produtos_por_dia.csv`
+
+Recorte de 90 dias de quantidades sintéticas vendidas por produto para o Bar do Léo
+e a Linha & Cor. Não é uma abertura integral nem reconciliada de todo o faturamento;
+serve para estimar o ritmo-base dos SKUs elegíveis sem contar novamente as vendas
+que já estão na previsão agregada.
+
+O catálogo completo fica em `perfil_dos_negocios.json`, no campo `commercial`, com
+nome, categoria, preço, custo, margem implícita, estoque disponível, histórico diário
+e, conforme o setor, validade ou coleção. Para o bar, o motor testa pares de bebida e
+petisco. Para roupas, testa itens e a coleção anterior. A escolha é feita pelo efeito
+incremental no caixa e na margem, não somente pelo volume histórico.
+
 ### `perfil_dos_negocios.json`
 Ficha de cada negócio: setor, ticket médio, mix de pagamento, taxas e prazos usados,
 saldo inicial e o diagnóstico de caixa acima.
@@ -113,6 +131,14 @@ de referência. Existe para que haja algo real a ser detectado pela previsão.
 
 **Liquidação** em dias corridos, sem feriados. Não há cancelamentos, chargebacks, tributos
 por transação nem conciliação entre múltiplos adquirentes.
+
+**Promoções comerciais.** A campanha dura 14 dias no bar e 21 dias em roupas. A
+adesão hipotética é de 72% e 68%; a canibalização de outras vendas, 18% e 24%.
+O desconto aumenta a demanda com teto explícito. O motor desconta a redução de preço
+das unidades que já venderiam normalmente e a receita deslocada de outras compras.
+O estoque já comprado reduz o ativo e a margem, mas não é lançado novamente como
+saída de caixa. A faixa probabilística do cenário-base não é reaproveitada: o efeito
+da promoção é identificado como estimativa pontual.
 
 ---
 

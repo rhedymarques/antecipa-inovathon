@@ -38,6 +38,19 @@ Taxas: Pix 0%; débito 1,2%; crédito 2,5%; 3 parcelas 3,2%. Liquidação em dia
 
 O plano existe apenas durante a sessão e não é persistido. Nenhum dado pessoal é solicitado. A publicação do site é gerenciada separadamente do repositório público.
 
+## Promoções comerciais por produto
+
+O motor também contém uma camada demonstrativa para o **Bar do Léo** e a **Linha & Cor**.
+Ela avalia combos de bebida e petisco ou liquidação de coleção anterior a partir de
+históricos e estoques sintéticos por produto. `evaluatePromotion()` devolve produtos,
+parâmetros, hipóteses, margem, estoque e a série diária comparando o caixa com e sem a
+campanha. `evaluateActions(shop, data, { includePromotion: true })` e `recommend()` consideram essa ação, mas podem recusá-la
+quando ela não melhora o caixa, prejudica a margem ou apenas mascara um problema estrutural.
+
+Essa camada é uma simulação pontual, não uma inferência causal nem uma faixa probabilística
+recalculada. Em produção, preços, custos, estoque e histórico por SKU precisariam vir do
+lojista ou de integração com seu sistema de gestão.
+
 ## Versão 2: proposta da equipe
 
 Consulte `dist/alinhamento-proposta.md` para o que foi incorporado e as correções conceituais. A interface inclui modo somente pagamentos, informações complementares explicitamente simuladas, alertas proativos ao recalcular, tabela comparativa de alternativas, capital de giro e estimativa de início de operação. O modelo de pouco histórico não tem teste independente e informa essa limitação. Os dados contábeis são hipóteses, não saídas da floresta.

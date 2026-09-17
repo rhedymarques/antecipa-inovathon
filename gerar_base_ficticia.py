@@ -142,6 +142,56 @@ PERFIS = {
     },
 }
 
+# Catalogo elegivel para demonstrar promocoes. Precos, custos, estoques, giro e
+# elasticidades sao HIPOTESES SINTETICAS, nao parametros calibrados com clientes.
+# O RNG de produtos e separado para que a inclusao desta camada nao altere a
+# serie financeira historica que ja era reproduzida pela semente principal.
+SEMENTES_PRODUTOS = {"bar": 4201, "vestuario": 4202}
+PRODUTOS_PROMOCAO = {
+    "bar": [
+        {"id": "cerveja_600", "nome": "Cerveja 600 ml", "categoria": "bebida",
+         "preco": 18.0, "custo": 8.20, "estoque": 175, "unidades_dia": 9.2,
+         "validade": "2026-10-18", "tags": ["combo", "giro_alto"]},
+        {"id": "refrigerante_lata", "nome": "Refrigerante lata", "categoria": "bebida",
+         "preco": 8.0, "custo": 3.10, "estoque": 190, "unidades_dia": 7.0,
+         "validade": "2027-02-15", "tags": ["combo"]},
+        {"id": "batata_rustica", "nome": "Porção de batata rústica", "categoria": "petisco",
+         "preco": 28.0, "custo": 10.40, "estoque": 105, "unidades_dia": 4.3,
+         "validade": "2026-10-05", "tags": ["combo", "validade_proxima"]},
+        {"id": "isca_frango", "nome": "Isca de frango", "categoria": "petisco",
+         "preco": 34.0, "custo": 14.00, "estoque": 64, "unidades_dia": 2.2,
+         "validade": "2026-10-02", "tags": ["combo", "validade_proxima"]},
+    ],
+    "vestuario": [
+        {"id": "vestido_aurora", "nome": "Vestido Aurora", "categoria": "vestido",
+         "preco": 249.0, "custo": 104.00, "estoque": 58, "unidades_dia": 0.55,
+         "colecao": "Outono 2026", "tags": ["colecao_anterior", "baixo_giro"]},
+        {"id": "calca_reta", "nome": "Calça Reta Essencial", "categoria": "calça",
+         "preco": 219.0, "custo": 91.00, "estoque": 51, "unidades_dia": 0.48,
+         "colecao": "Outono 2026", "tags": ["colecao_anterior", "baixo_giro"]},
+        {"id": "blusa_linho", "nome": "Blusa de Linho", "categoria": "blusa",
+         "preco": 139.0, "custo": 54.00, "estoque": 84, "unidades_dia": 0.82,
+         "colecao": "Outono 2026", "tags": ["colecao_anterior"]},
+        {"id": "jaqueta_serra", "nome": "Jaqueta Serra", "categoria": "jaqueta",
+         "preco": 329.0, "custo": 151.00, "estoque": 29, "unidades_dia": 0.19,
+         "colecao": "Inverno 2026", "tags": ["colecao_anterior", "baixo_giro"]},
+        {"id": "camisa_nova", "nome": "Camisa Horizonte", "categoria": "camisa",
+         "preco": 179.0, "custo": 73.00, "estoque": 30, "unidades_dia": 0.92,
+         "colecao": "Primavera 2027", "tags": ["colecao_atual"]},
+    ],
+}
+
+HIPOTESES_PROMOCAO = {
+    "bar": {"campaignDays": 14, "historyDays": 90, "discountGridPct": [5, 10, 15],
+            "upliftPerDiscountPoint": 0.075, "maxUplift": 1.50,
+            "participationRate": 0.72, "cannibalizationRate": 0.18,
+            "paymentMix": [0.52, 0.34, 0.14, 0.0]},
+    "vestuario": {"campaignDays": 21, "historyDays": 90, "discountGridPct": [10, 20, 30, 40],
+                  "upliftPerDiscountPoint": 0.055, "maxUplift": 2.20,
+                  "participationRate": 0.68, "cannibalizationRate": 0.24,
+                  "paymentMix": [0.30, 0.25, 0.25, 0.20]},
+}
+
 # Choque de demanda: queda de vendas num intervalo, para o modelo ter
 # algo real para detectar. Dias contados a partir do fim do historico.
 CHOQUE = {"inicio_dias_atras": 75, "duracao": 32, "intensidade": -0.09}
@@ -195,6 +245,45 @@ def gerar_mix_diario(perfil: dict, n_dias: int, rng) -> np.ndarray:
     """
     alpha = np.array(perfil["mix"]) * perfil["mix_concentracao"]
     return rng.dirichlet(alpha, size=n_dias)
+
+
+def gerar_historico_produtos(chave: str, datas: list[date]) -> dict | None:
+    """Gera 90 dias de unidades por SKU elegivel, com RNG proprio e auditavel.
+
+    A serie representa um recorte demonstrativo do catalogo, nao uma abertura
+    reconciliada de 100% das vendas do estabelecimento. O motor usa somente o
+    ritmo em unidades para estimar o incremental de uma campanha; o faturamento
+    normal continua vindo da previsao agregada, evitando dupla contagem.
+    """
+    if chave not in PRODUTOS_PROMOCAO:
+        return None
+    hip = HIPOTESES_PROMOCAO[chave]
+    janela = datas[-hip["historyDays"]:]
+    rng = np.random.default_rng(SEMENTES_PRODUTOS[chave])
+    produtos = []
+    for produto in PRODUTOS_PROMOCAO[chave]:
+        hist = []
+        for i, dia in enumerate(janela):
+            fator_semana = PERFIS[chave]["fator_semana"][dia.weekday()]
+            # Colecao anterior perde giro gradualmente; bar preserva nivel.
+            declinio = (1 - 0.0035 * i) if "colecao_anterior" in produto["tags"] else 1.0
+            media = max(0.03, produto["unidades_dia"] * fator_semana * declinio)
+            unidades = int(rng.poisson(media))
+            hist.append({"date": dia.isoformat(), "units": unidades})
+        p = {"id": produto["id"], "name": produto["nome"], "category": produto["categoria"],
+             "price": produto["preco"], "cost": produto["custo"], "stock": produto["estoque"],
+             "collection": produto.get("colecao"), "validUntil": produto.get("validade"),
+             "tags": produto["tags"]}
+        p["history"] = hist
+        produtos.append(p)
+    return {
+        "synthetic": True,
+        "seed": SEMENTES_PRODUTOS[chave],
+        "source": "hipoteses de demonstracao; requer validacao com lojistas ou ERP",
+        "historyScope": "recorte de SKUs elegiveis, nao abertura integral do faturamento",
+        "assumptions": hip,
+        "products": produtos,
+    }
 
 
 def gerar_recebiveis(chave: str, perfil: dict, datas: list[date],
@@ -347,7 +436,7 @@ def main() -> None:
     SAIDA.mkdir(parents=True, exist_ok=True)
     datas = datas_historico()
 
-    linhas_vendas, linhas_receb, linhas_desp = [], [], []
+    linhas_vendas, linhas_receb, linhas_desp, linhas_produtos = [], [], [], []
     perfis_saida = {}
 
     print(f"Referencia: {DATA_REF}  |  historico: {DIAS_HISTORICO} dias  |  semente: {SEMENTE}\n")
@@ -371,6 +460,12 @@ def main() -> None:
         linhas_desp += desp
 
         diag = diagnosticar(perfil, datas, vendas, receb, desp)
+        comercial = gerar_historico_produtos(chave, datas)
+        if comercial:
+            for produto in comercial["products"]:
+                for item in produto["history"]:
+                    linhas_produtos.append({"negocio": chave, "produto": produto["id"],
+                                            "data": item["date"], "quantidade": item["units"]})
         perfis_saida[chave] = {
             "nome": perfil["nome"],
             "setor": perfil["setor"],
@@ -388,6 +483,8 @@ def main() -> None:
             "diagnostico_90d": diag,
             "faturamento_medio_mensal": round(float(np.mean(vendas)) * 30, 2),
         }
+        if comercial:
+            perfis_saida[chave]["commercial"] = comercial
 
         ok = "OK " if diag["modo_detectado"] == perfil["aperto_alvo"] else "!! "
         print(f"{ok}{perfil['nome']:<22} ({perfil['setor']})")
@@ -403,6 +500,7 @@ def main() -> None:
     _escrever_csv(SAIDA / "vendas_por_dia.csv", linhas_vendas)
     _escrever_csv(SAIDA / "agenda_de_recebiveis.csv", linhas_receb)
     _escrever_csv(SAIDA / "contas_a_pagar.csv", linhas_desp)
+    _escrever_csv(SAIDA / "produtos_por_dia.csv", linhas_produtos)
     (SAIDA / "perfil_dos_negocios.json").write_text(
         json.dumps({"data_referencia": DATA_REF.isoformat(),
                     "semente": SEMENTE,
