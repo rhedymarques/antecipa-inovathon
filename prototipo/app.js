@@ -230,7 +230,7 @@
     $('recommendationSection').classList.toggle('structural', structural);
     $('recommendationSection').classList.toggle('healthy', healthy);
     $('recommendationContent').innerHTML = `<h2 id="recommendationTitle">${escapeHtml(healthy ? 'Acompanhar o caixa' : actionMeta[rec.action]?.title || rec.label || 'Veja esta medida')}</h2>${structural ? '<p class="structural-alert"><strong>Esta medida ajuda, mas não resolve sozinha.</strong> O ajuste nas entradas e saídas precisa continuar.</p>' : ''}<p class="recommendation-reason">${escapeHtml(shortReason)}</p>${healthy ? '' : `<div class="recommendation-metrics"><div><strong>${money(finite(rec.cost))}</strong><span>custo estimado</span></div><div><strong>${money(finite(rec.coversAmount))}</strong><span>alívio no maior aperto</span></div><div><strong>${coverage !== null ? `${Math.round(coverage)}%` : 'Indisponível'}</strong><span>do valor que pode faltar</span></div><div><strong>${money(finite(rec.saldo30Impacto))}</strong><span>mudança no saldo do dia 30</span></div></div><p class="small-note">Estimativas para comparação; o resultado real pode variar.</p>`}`;
-    $('technicalContent').innerHTML = `<h3>Por que esta medida foi escolhida</h3><p>${escapeHtml(rec.justificativa || 'Justificativa indisponível.')}</p><p>Probabilidade de algum saldo negativo no cenário atual de ${state.horizon} dias: ${pct(rec.probNegative)}. Os efeitos das ações são simulações pontuais e não têm faixa probabilística recalculada.</p><h3>Limites dos ajustes</h3><p>O desconto no Pix, a mudança de parcelas e a antecipação são calculados com hipóteses. Os controles de Pix e parcelamento são avaliados separadamente nesta tela. A promoção de estoque ainda não tem cálculo de demanda, margem ou entrada de caixa.</p>`;
+    $('technicalContent').innerHTML = `<h3>Por que esta medida foi escolhida</h3><p>${escapeHtml(rec.justificativa || 'Justificativa indisponível.')}</p><p>Probabilidade de algum saldo negativo no cenário atual de ${state.horizon} dias: ${pct(rec.probNegative)}. Os efeitos das ações são simulações pontuais e não têm faixa probabilística recalculada.</p><h3>Limites dos ajustes</h3><p>O desconto no Pix, a mudança de parcelas e a antecipação são calculados com hipóteses. Os controles de Pix e parcelamento são avaliados separadamente nesta tela.</p>`;
   }
 
   function renderActions() {
@@ -293,14 +293,6 @@
     renderAdjustment('installmentsResult', { pixDiscount: 0, maxInstall: options().maxInstall });
     renderAdjustment('pixResult', { pixDiscount: options().pixDiscount, maxInstall: 3 });
   }
-  function renderStock() {
-    const share = Number($('stockShareRange').value);
-    const discount = Number($('stockDiscountRange').value);
-    $('stockShareValue').textContent = `${share}%`;
-    $('stockDiscountValue').textContent = `${discount}%`;
-    $('stockResult').textContent = `Plano de campanha: separar ${share}% do estoque e oferecer ${discount}% de desconto. Antes de lançar, confira a margem e os produtos escolhidos. O efeito no caixa ainda não pode ser estimado nesta demonstração.`;
-  }
-
   function renderAll() {
     state.recommendation = getRecommendation();
     const recommendedPix = finite(state.recommendation?.params?.pixDiscount);
@@ -315,11 +307,9 @@
     $('choicesSection').hidden = !showChoices;
     $('simulatorSection').hidden = !showChoices;
     $('pixSection').hidden = !showChoices;
-    $('stockSection').hidden = !showChoices;
     if (showChoices) {
       renderActions();
       renderSimulator();
-      renderStock();
     } else {
       state.actions = [];
     }
@@ -372,7 +362,6 @@
   document.querySelectorAll('[data-horizon]').forEach(button => button.addEventListener('click', () => selectHorizon(Number(button.dataset.horizon))));
   $('shopSelect').addEventListener('change', event => selectShop(event.target.value));
   ['pixRange', 'installmentsRange'].forEach(id => $(id).addEventListener('input', renderSimulator));
-  ['stockShareRange', 'stockDiscountRange'].forEach(id => $(id).addEventListener('input', renderStock));
   $('backButton').addEventListener('click', closeDetail);
   $('notifyButton').addEventListener('click', showNotification);
   $('noticeClose').addEventListener('click', () => { $('notice').hidden = true; });
