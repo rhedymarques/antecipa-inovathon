@@ -53,6 +53,7 @@
           <div class="shop-picker">
             <label for="shopSelect">Meu negócio</label>
             <select id="shopSelect" aria-label="Selecionar negócio"></select>
+            <p id="shopNote" class="shop-note" hidden></p>
           </div>
 
           <div class="period-switch" role="group" aria-label="Período da previsão">
@@ -64,7 +65,7 @@
             <div class="card-heading"><div><span class="eyebrow">PRÓXIMOS DIAS</span><h2 id="chartTitle">Previsão de caixa</h2></div><span class="soft-icon" aria-hidden="true">↗</span></div>
             <p class="support-copy">A linha mostra o cenário central. A área clara indica a variação possível.</p>
             <div id="chart" class="chart" role="img" aria-label="Gráfico da previsão do caixa"></div>
-            <div class="chart-legend"><span><i class="legend-line"></i>Caminho central</span><span><i class="legend-band"></i>Faixa de 95%</span></div>
+            <div class="chart-legend"><span><i class="legend-line"></i>Caminho central</span><span><i class="legend-band"></i>Variação possível</span></div>
           </section>
 
           <section class="card status-card" aria-labelledby="statusTitle">
@@ -78,22 +79,39 @@
             <div id="explanationContent" class="explanation-content"></div>
           </section>
 
+          <section id="recommendationSection" class="card recommendation-card" aria-labelledby="recommendationTitle">
+            <span class="eyebrow">SUGESTÃO PARA O SEU CAIXA</span>
+            <div id="recommendationContent"></div>
+          </section>
+
           <section id="choicesSection" class="choices-section" aria-labelledby="choicesTitle">
-            <div class="section-heading"><div><span class="eyebrow">COMPARE ANTES DE DECIDIR</span><h2 id="choicesTitle">O que você pode fazer</h2></div></div>
+            <div class="section-heading"><div><span class="eyebrow">COMPARE ANTES DE DECIDIR</span><h2 id="choicesTitle">Outras escolhas para comparar</h2></div></div>
             <p id="choicesIntro" class="support-copy"></p>
             <div id="actionList" class="action-list"></div>
             <p id="marginWarning" class="margin-warning" hidden></p>
           </section>
 
           <section id="simulatorSection" class="card simulator-card" aria-labelledby="simTitle">
-            <div class="card-heading"><div><span class="eyebrow">TESTE OUTRO CAMINHO</span><h2 id="simTitle">Simulador</h2></div><span class="soft-icon" aria-hidden="true">◌</span></div>
-            <p class="support-copy">Experimente ajustes nas próximas vendas e compare o resultado estimado.</p>
-            <label class="slider-label" for="pixRange">Desconto para pagamento no Pix <output id="pixValue" for="pixRange">0%</output></label>
-            <input id="pixRange" type="range" min="0" max="6" step="0.5" value="0">
-            <label class="slider-label" for="installmentsRange">Parcelamento máximo <output id="installmentsValue" for="installmentsRange">3×</output></label>
+            <div class="card-heading"><div><span class="eyebrow">TESTE UMA MUDANÇA</span><h2 id="simTitle">Ajustar parcelas das vendas</h2></div><span class="soft-icon" aria-hidden="true">◌</span></div>
+            <p class="support-copy">Mais parcelas fazem o dinheiro das vendas chegar ao longo de mais tempo. Compare o efeito nos próximos dias.</p>
+            <label class="slider-label" for="installmentsRange">Até quantas parcelas? <output id="installmentsValue" for="installmentsRange">3×</output></label>
             <input id="installmentsRange" type="range" min="0" max="3" step="1" value="0">
-            <div id="simulatorResult" class="simulator-result" aria-live="polite"></div>
-            <p id="simulatorNote" class="small-note" role="status"></p>
+            <div id="installmentsResult" class="simple-result" aria-live="polite"></div>
+          </section>
+
+          <section id="pixSection" class="card simulator-card" aria-labelledby="pixTitle">
+            <div class="card-heading"><div><span class="eyebrow">TESTE UMA MUDANÇA</span><h2 id="pixTitle">Oferecer desconto no Pix</h2></div><span class="soft-icon" aria-hidden="true">◇</span></div>
+            <p class="support-copy">Veja se receber mais vendas na hora compensa dar um desconto a quem paga no Pix.</p>
+            <label class="slider-label" for="pixRange">Desconto para quem pagar no Pix <output id="pixValue" for="pixRange">0%</output></label>
+            <input id="pixRange" type="range" min="0" max="6" step="0.5" value="0">
+            <div id="pixResult" class="simple-result" aria-live="polite"></div>
+          </section>
+
+          <section class="card technical-card" aria-label="Detalhes opcionais do protótipo">
+            <details id="technicalDetails"><summary>Como calculamos esta demonstração</summary>
+              <div id="technicalContent"></div>
+              <div id="methodContent"></div>
+            </details>
           </section>
 
           <footer class="disclaimer">Demonstração com dados sintéticos. Nenhuma ação financeira é executada ou contratada.</footer>

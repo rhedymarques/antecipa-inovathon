@@ -16,17 +16,20 @@ Abra `http://127.0.0.1:8765/prototipo/`. Não abra `index.html` com `file://`: o
 
 1. Ao abrir, uma notificação **simulada** aparece quando o primeiro negócio tem um alerta. O sino permite repeti-la. Toque nela para entrar na aba Antecipa.
 2. Selecione um negócio e compare 30 e 60 dias. O gráfico usa os quantis fornecidos em `dist/data.json`; ele mostra a linha central, uma faixa de 95%, a linha do zero e, quando há problema, o dia de maior concentração de saldo negativo.
-3. Leia o diagnóstico probabilístico. Em problema de margem, antecipação e ajuste do mix não aparecem como soluções estruturais; o simulador ainda pode comparar o mix e explica seu limite. Em cenário saudável, apenas a previsão e a mensagem positiva são exibidas; alternativas e simulador ficam ocultos.
-4. Abra uma alternativa para ver funcionamento, custo direto estimado, efeito sobre o pior saldo e efeito no fim de 60 dias. **Não fazer nada** permanece como referência. A lista exclui ações sem melhora do pior saldo ou cujo custo supere o déficit determinístico.
-5. Mova os controles do simulador: o desconto Pix vai de 0 a 6% e o parcelamento máximo oferece 3, 4, 6 ou 12 vezes. A interface reexecuta `evaluateActions()` com `pixDiscount` e `maxInstall`; a ação de mix mostra custo e melhora do pior saldo sob hipóteses, mesmo quando não é adequada à lista de alternativas. As faixas probabilísticas continuam representando o cenário base.
+3. Leia a situação do negócio e a sugestão em destaque. Em margem, o aviso diz que a medida só ameniza o problema; em cenário saudável, há apenas orientação de acompanhamento. O Café Primeiro Passo mostra um aviso curto de pouco histórico.
+4. Compare os cinco cartões. Se uma mudança não melhora o pior dia, o cartão diz **Não resolve neste caso** e apresenta uma razão curta, inclusive para a antecipação do Bar do Léo. Abra um cartão para ver funcionamento, cautelas, antes/depois e plano da sessão.
+5. Explore separadamente **Ajustar parcelas das vendas** e **Oferecer desconto no Pix**. Cada cartão atualiza apenas a sua própria comparação, mostrando o efeito no momento de maior aperto e o saldo ao fim dos 30 ou 60 dias escolhidos. O cartão do Pix também informa o total simulado em descontos concedidos aos clientes.
+6. No fim da aba, abra **Como calculamos esta demonstração** se quiser ver a justificativa completa do motor, probabilidades, método, variáveis de maior peso e validação sintética. Essas explicações ficam fora do fluxo principal.
 
 ## Integração e limites
 
 - `app.js` lê `../dist/data.json` e carrega `../dist/engine.js` sem modificá-los.
-- A lista de alternativas é renderizada a partir de `evaluateActions()`; novos códigos de ação recebem uma apresentação genérica se não houver texto específico no front.
+- A recomendação vem de `recommend()` e a comparação vem de `evaluateActions()`. Os textos operacionais e cautelas das cinco ações ficam no front porque o motor não devolve `how` nem `caution`.
 - O diagnóstico e as probabilidades vêm de `shop.uncertainty.horizons`. Sem esses campos, a página informa que a análise está indisponível; não cria uma probabilidade fictícia.
 - As alternativas determinísticas de `evaluateActions()` e as faixas de Monte Carlo são cálculos diferentes. O protótipo não recalcula o Monte Carlo ao mover controles.
-- O método detalhado e o número de cenários não ocupam mais a tela do gráfico; as premissas continuam no back-end e na documentação.
+- Os dois controles usam `simulate()` do motor existente com as séries limitadas ao horizonte selecionado. O parcelamento e o Pix são testados separadamente contra o cenário sem mudança; o total de descontos corresponde apenas aos dias exibidos.
+- O método detalhado fica em um painel recolhível no fim da aba. O gráfico permanece simples.
+- Uma eventual liquidação de estoque fica como evolução futura do projeto; a interface não oferece controles para uma ação que ainda não tem cálculo de caixa.
 - Custos operacionais indiretos, condições reais de crédito, elegibilidade de recebíveis e impacto comercial do desconto no Pix não são conhecidos pela demonstração.
 - A notificação é um elemento da página; não há push do sistema, monitoramento em segundo plano, login ou transação financeira.
 
