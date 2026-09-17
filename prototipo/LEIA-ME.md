@@ -18,7 +18,7 @@ Abra `http://127.0.0.1:8765/prototipo/`. Não abra `index.html` com `file://`: o
 2. Selecione um negócio e compare 30 e 60 dias. O gráfico usa os quantis fornecidos em `dist/data.json`; ele mostra a linha central, uma faixa de 95%, a linha do zero e, quando há problema, o dia de maior concentração de saldo negativo.
 3. Leia a situação do negócio e a sugestão em destaque. Em margem, o aviso diz que a medida só ameniza o problema; em cenário saudável, há apenas orientação de acompanhamento. O Café Primeiro Passo mostra um aviso curto de pouco histórico.
 4. Compare os cinco cartões. Se uma mudança não melhora o pior dia, o cartão diz **Não resolve neste caso** e apresenta uma razão curta, inclusive para a antecipação do Bar do Léo. Abra um cartão para ver funcionamento, cautelas, antes/depois e plano da sessão.
-5. Explore separadamente **Ajustar parcelas das vendas** e **Desconto no Pix**. Cada cartão atualiza apenas a sua própria comparação. O cartão **Liquidação de estoque** permite esboçar uma campanha, mas não calcula ganho de caixa: o motor ainda não modela demanda, margem ou vendas de uma promoção.
+5. Explore separadamente **Ajustar parcelas das vendas** e **Desconto no Pix**. Cada cartão atualiza apenas a sua própria comparação.
 6. No fim da aba, abra **Como calculamos esta demonstração** se quiser ver a justificativa completa do motor, probabilidades, método, variáveis de maior peso e validação sintética. Essas explicações ficam fora do fluxo principal.
 
 ## Integração e limites
@@ -28,7 +28,7 @@ Abra `http://127.0.0.1:8765/prototipo/`. Não abra `index.html` com `file://`: o
 - O diagnóstico e as probabilidades vêm de `shop.uncertainty.horizons`. Sem esses campos, a página informa que a análise está indisponível; não cria uma probabilidade fictícia.
 - As alternativas determinísticas de `evaluateActions()` e as faixas de Monte Carlo são cálculos diferentes. O protótipo não recalcula o Monte Carlo ao mover controles.
 - O método detalhado fica em um painel recolhível no fim da aba. O gráfico permanece simples.
-- A campanha de estoque é um plano exploratório de interface; seus controles não chamam uma ação inexistente no motor nem prometem receita.
+- Uma eventual liquidação de estoque fica como evolução futura do projeto; a interface não oferece controles para uma ação que ainda não tem cálculo de caixa.
 - Custos operacionais indiretos, condições reais de crédito, elegibilidade de recebíveis e impacto comercial do desconto no Pix não são conhecidos pela demonstração.
 - A notificação é um elemento da página; não há push do sistema, monitoramento em segundo plano, login ou transação financeira.
 
