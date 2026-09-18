@@ -1,8 +1,8 @@
-# Guia do grupo — Copiloto de Caixa
+# Guia do grupo — Antecipa
 
 ## Acessar o repositório público
 
-O código está disponível publicamente em https://github.com/rhedymarques/copiloto-caixa-inovathon. Qualquer pessoa pode abrir ou clonar o repositório sem convite. Permissão de escrita continua restrita aos colaboradores autorizados no GitHub.
+O código está disponível publicamente em https://github.com/rhedymarques/antecipa-inovathon. Qualquer pessoa pode abrir ou clonar o repositório sem convite. Permissão de escrita continua restrita aos colaboradores autorizados no GitHub.
 
 Para colaborar, trabalhe em uma branch própria e abra um pull request. Não publique dados reais de clientes, senhas ou chaves: os dados deste projeto são fictícios.
 

@@ -1,4 +1,4 @@
-# Copiloto de Caixa — alinhamento da versão 2
+# Antecipa — alinhamento da versão 2
 
 ## O que foi incorporado da proposta da equipe
 

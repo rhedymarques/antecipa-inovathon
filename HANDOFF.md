@@ -1,4 +1,4 @@
-# Handoff — Antecipa / Copiloto de Caixa
+# Handoff — Antecipa
 
 Estado verificado em **17/09/2026** para o II Inovathon SemAd 2026, desafio Cielo “Inteligência de Caixa para PMEs”.
 
@@ -13,7 +13,7 @@ O sistema recomenda uma alternativa pelas hipóteses simuladas, mostra custo e e
 
 ## Acesso e execução para avaliadores
 
-- Repositório público: https://github.com/rhedymarques/copiloto-caixa-inovathon
+- Repositório público: https://github.com/rhedymarques/antecipa-inovathon
 - A demonstração é HTML, CSS e JavaScript sem build e sem backend.
 - Na raiz do projeto, execute:
 

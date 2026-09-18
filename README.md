@@ -1,56 +1,82 @@
-# Copiloto de Caixa — protótipo do Inovathon
+# Antecipa — Inovathon UFSCar 2026 (desafio Cielo)
 
-Protótipo independente, sem vínculo oficial ou integração com a Cielo. Todos os dados são sintéticos. Não representa taxas, políticas comerciais ou formatos internos da empresa.
+**Antecipa** é um copiloto de caixa para pequenos negócios. Ele prevê o fluxo de
+caixa dos próximos 30 a 60 dias, diagnostica se um aperto é problema de **prazo**
+ou de **margem**, e recomenda a ação mais barata que resolve — inclusive
+recomendar *não fazer nada* quando agir custa mais que o risco. Nada é executado
+automaticamente: o sistema mostra custo e impacto, e a decisão é sempre do lojista.
 
-## Continuar o desenvolvimento
+> Projeto acadêmico, sem vínculo ou integração com a Cielo. **Todos os dados são
+> sintéticos** e não representam taxas, políticas ou formatos internos da empresa.
 
-**Colegas e assistentes de IA: comecem pelo [HANDOFF.md](HANDOFF.md).** Ele registra o que já funciona, a arquitetura, como testar, os limites conhecidos e o backlog priorizado. As orientações para agentes estão em [AGENTS.md](AGENTS.md).
+## Equipe
 
-## Acesso do grupo
+Primeira turma de graduação em Ciência de Dados e Inteligência Artificial da
+UFSCar — campus Sorocaba.
 
-Consulte o [Guia do grupo](GUIA_DO_GRUPO.md) para clonar o repositório público e abrir a demonstração localmente. A visibilidade do código é separada do acesso ao site hospedado.
+- Felipe Pezzato Toledo Prado
+- Gustavo Eiji Tomita Camelo
+- Otávio André Martinez
+- Rhédy Marques Silva
+- Vitor Sotto Rodrigues
 
-## Executar
+Orientação: Profa. Dra. Adriane Portela (Estatística, UFSCar).
 
-Para apenas visualizar, as previsões já estão incluídas: execute `python -m http.server 8765 --bind 127.0.0.1 --directory dist` e abra http://localhost:8765. Não é necessário treinar novamente.
+## Como abrir o protótipo
 
-Para recriar os dados e treinar, use Python 3.12+: `pip install -r requirements.txt`, depois `python work/train_model.py` para gerar dados e previsões. Sirva a pasta `dist` com `python -m http.server 8765 --directory dist` e abra http://localhost:8765.
+O protótipo é uma página que roda no navegador. As previsões já vêm prontas, não
+é preciso treinar nada.
 
-O treinamento usa RandomForestRegressor, 100 árvores por negócio, saída direta de 60 dias. As previsões geradas são consumidas pelo navegador. O simulador recalcula o caixa imediatamente; não retreina ao mover controles. Os dados e o treinamento são reproduzíveis com semente 42. Cenários não são inferências causais. O script principal também executa `work/enrich_model.py`, que acrescenta o quarto negócio com 14 dias de histórico, uma floresta treinada em 18 empresas sintéticas (semente 2026) e os dados contábeis declarados.
+    python -m http.server 8000
 
-## Validação
+Depois abra **http://localhost:8000/prototipo/**. Abra pelo servidor, não com
+duplo clique no HTML — o navegador precisa carregar os dados pelo servidor local.
 
-Os três negócios com modelo individual contêm 620 dias de vendas. Reservam-se os últimos 60 para um teste com origem fixa. Exemplos de treino têm todos os seus alvos antes desse corte. Compara-se MAE em reais por dia com repetição da última semana. Depois da avaliação, treina-se novamente com todo o histórico disponível para prever os próximos 60 dias. Não há comprovação de generalização para dados reais, intervalos calibrados ou previsão de mortalidade empresarial.
+Selecione um negócio (Bar do Léo ou Linha & Cor), veja a projeção de caixa em 30
+ou 60 dias, o diagnóstico e as alternativas comparadas.
 
-## Caixa
+## Como funciona
 
-Recebíveis existentes são gerados apenas por vendas anteriores à data de referência; novas vendas previstas são liquidadas segundo mix e prazos hipotéticos. Saldo e despesas são dados complementares do lojista. Antecipação remove o principal das datas originais e adiciona principal menos custo hoje. Renegociação mantém a despesa, movendo-a em sete dias. Economia operacional supõe ausência de efeito nas vendas. Todas as ações são simulações sem transações externas. Valores da interface arredondados; cálculo interno em ponto flutuante, apropriado apenas para protótipo.
+1. **Dados** — histórico de vendas, recebíveis, saldo e despesas previstas.
+2. **Previsão** — um `RandomForestRegressor` aprende o padrão de vendas de cada
+   negócio e projeta os próximos 60 dias.
+3. **Simulação** — Monte Carlo com 2.000 cenários mede o risco com probabilidade,
+   variando volume de vendas, mix de pagamento e cancelamentos.
+4. **Diagnóstico** — o sistema classifica cada cenário em saudável, problema de
+   prazo (timing) ou de margem, e reporta o resultado mais frequente.
+5. **Recomendação** — compara as alternativas por custo e escolhe a mais barata
+   que resolve, sem sugerir antecipação automaticamente.
 
-Taxas: Pix 0%; débito 1,2%; crédito 2,5%; 3 parcelas 3,2%. Liquidação em dias corridos, sem feriados: D+0, D+1, D+30 e D+30/60/90. Antecipação ilustrativa de 2,5% por 30 dias, proporcional ao prazo. Sem cancelamentos, chargebacks, tributos por transação ou conciliação de múltiplos provedores.
+Tudo reproduzível com semente fixa (42). As previsões não são inferências causais
+e não comprovam desempenho em dados reais.
 
-## Demonstração
+## Recriar os dados e treinar
 
-1. Selecione um dos quatro negócios fictícios.
-2. Observe o menor saldo e a data de insuficiência.
-3. Compare negociação, economia e antecipação.
-4. Confira 60 dias para ver custos e obrigações deslocadas.
-5. Abra Modelo e validação e Origem dos dados; exporte o fluxo.
+Python 3.12+:
 
-O plano existe apenas durante a sessão e não é persistido. Nenhum dado pessoal é solicitado. A publicação do site é gerenciada separadamente do repositório público.
+    pip install -r requirements.txt
+    python work/train_model.py
 
-## Promoções comerciais por produto
+O script regenera a base sintética e as previsões (`dist/data.json`), de forma
+reproduzível.
 
-O motor também contém uma camada demonstrativa para o **Bar do Léo** e a **Linha & Cor**.
-Ela avalia combos de bebida e petisco ou liquidação de coleção anterior a partir de
-históricos e estoques sintéticos por produto. `evaluatePromotion()` devolve produtos,
-parâmetros, hipóteses, margem, estoque e a série diária comparando o caixa com e sem a
-campanha. `evaluateActions(shop, data, { includePromotion: true })` e `recommend()` consideram essa ação, mas podem recusá-la
-quando ela não melhora o caixa, prejudica a margem ou apenas mascara um problema estrutural.
+## Estrutura
 
-Essa camada é uma simulação pontual, não uma inferência causal nem uma faixa probabilística
-recalculada. Em produção, preços, custos, estoque e histórico por SKU precisariam vir do
-lojista ou de integração com seu sistema de gestão.
+- `prototipo/` — a interface que roda no navegador (o protótipo do projeto)
+- `dist/engine.js` — motor de cálculo: previsão, diagnóstico e recomendações
+- `dist/data.json` — previsões já geradas, consumidas pela interface
+- `gerar_base_ficticia.py` — gerador da base sintética dos negócios
+- `dados_ficticios/` — a base sintética e sua documentação (ver `LEIA-ME.md`)
+- `work/` — treino do modelo, simulação de Monte Carlo e testes
 
-## Versão 2: proposta da equipe
+## Limites
 
-Consulte `dist/alinhamento-proposta.md` para o que foi incorporado e as correções conceituais. A interface inclui modo somente pagamentos, informações complementares explicitamente simuladas, alertas proativos ao recalcular, tabela comparativa de alternativas, capital de giro e estimativa de início de operação. O modelo de pouco histórico não tem teste independente e informa essa limitação. Os dados contábeis são hipóteses, não saídas da floresta.
+Dados 100% sintéticos. As taxas e prazos são hipóteses de demonstração. O sistema
+não movimenta dinheiro, não paga contas e não contrata crédito. Negócios com pouco
+histórico têm análise inicial menos precisa. O passo seguinte seria um piloto
+controlado, com dados autorizados e acompanhamento de especialistas.
+
+## Documentação técnica
+
+Detalhes de arquitetura, decisões e verificações estão em `HANDOFF.md`
+(back-end) e `prototipo/HANDOFF-FRONT.md` (interface).
