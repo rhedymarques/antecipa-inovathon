@@ -8,7 +8,7 @@ O Antecipa foi desenvolvido para o desafio Cielo “Inteligência de Caixa para 
 
 ## Para quem e para quê
 
-O protótipo representa a rotina de um lojista que tem vendas, recebimentos em datas diferentes e compromissos a pagar. A interface reúne previsão, explicação, comparação e um plano consultivo em uma aba móvel.
+O público inicial definido no documento executivo são micro e pequenas empresas de comércio e alimentação de bairro em seus primeiros anos de consolidação. O protótipo representa a rotina de um lojista que tem vendas, recebimentos em datas diferentes e compromissos a pagar. A interface reúne previsão, diagnóstico, simulação e comparação, e um Plano da Sessão consultivo em uma aba móvel.
 
 | Situação | Resposta da proposta |
 | --- | --- |
@@ -25,6 +25,8 @@ A proposta explora como informações de pagamentos podem apoiar decisões do lo
 Dados de pagamentos não descrevem, sozinhos, todo o caixa. Saldo, obrigações e outras fontes de recebimento precisam ser informados ou conciliados. O painel técnico demonstra essa distinção; a interface principal usa o cenário de dados complementares sintéticos.
 
 Não há uso de dados internos, integração, endosso ou produto oficial da Cielo. A interface é uma proposta acadêmica independente.
+
+O valor esperado para o lojista é ganhar tempo para decidir e entender as consequências das alternativas. Para a Cielo, a hipótese de evolução é apoiar um relacionamento mais frequente e contextual com o lojista, apresentando opções como Pix e antecipação quando fizerem sentido para aquele caixa. Adoção, redução de perdas e resultados comerciais ainda dependem de validação com negócios reais.
 
 ## O que já pode ser demonstrado
 
@@ -45,4 +47,6 @@ Estas são propostas de evolução, não funcionalidades entregues ou compromiss
 4. **Desenhar a integração.** Definir conciliação, consentimento, cobertura das obrigações e elegibilidade de recebíveis com os responsáveis pelos sistemas.
 5. **Executar um piloto controlado.** Acompanhar compreensão das recomendações, alertas úteis, custos das ações e resultados de caixa com supervisão especializada.
 
-Antes de produção, também seriam necessários backend, autenticação, persistência, observabilidade e revisão dos contratos do motor. As [limitações técnicas](METODOLOGIA.md#limitações-conhecidas) descrevem as lacunas atuais.
+O documento executivo também prevê um canal consultivo conversacional, comparação de ofertas de crédito com elegibilidade e CET reais e apresentação dinâmica de até três caminhos por níveis de custo. Esses recursos dependem de integração e validação; a interface atual mostra uma sugestão em destaque e uma quantidade variável de alternativas úteis.
+
+As camadas de processamento analítico e cálculo já existem. Sua operação em produção exigiria serviços integrados por API, autenticação, persistência, observabilidade e revisão dos contratos do motor. As [limitações técnicas](METODOLOGIA.md#limitações-conhecidas) descrevem as lacunas atuais.

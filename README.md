@@ -63,6 +63,10 @@ O [guia da interface](prototipo/LEIA-ME.md) detalha os controles. O [painel téc
 
 ## Como funciona
 
+O Antecipa possui uma **camada de processamento analítico em Python e um motor de cálculo em JavaScript**, desenvolvidos para sustentar a interface. Esse trabalho compõe o back-end analítico e as regras de negócio do protótipo: geração da base, treinamento, avaliação, simulação de cenários e comparação de ações.
+
+Na demonstração publicada, o Python prepara as previsões em arquivos JSON e o motor recalcula caixa e alternativas no navegador. **Não é necessário um servidor remoto de aplicação ou uma API de inferência para executar essa versão.** A integração dessas camadas em serviços de produção é uma evolução prevista.
+
 ```mermaid
 flowchart LR
     A[Histórico sintético de vendas] --> B[Random Forest em Python]
@@ -102,12 +106,12 @@ Para recriar a base e treinar os modelos, siga o [guia de reprodução](docs/REP
 | [`dist/data.json`](dist/data.json) | Dados, previsões e cenários previamente calculados. |
 | [`dist/`](dist/) | Painel técnico e arquivos servidos. **Contém código-fonte; não é uma pasta descartável.** |
 | [`dados_ficticios/`](dados_ficticios/LEIA-ME.md) | Bases sintéticas e seu dicionário de dados. |
-| [`work/`](work/) | Treinamento, Monte Carlo e testes do motor. |
+| [`work/`](work/README.md) | Processamento analítico em Python: treinamento, Monte Carlo e validação do motor. |
 | [`docs/`](docs/) | Proposta, arquitetura, metodologia e reprodução. |
 
 ## Limites e próximos passos
 
-Os resultados demonstram o comportamento do protótipo em uma base sintética; **não comprovam acurácia ou retorno financeiro em empresas reais**. Não há backend, persistência, monitoramento em segundo plano, integração bancária ou contratação de serviços. A data dos cenários é fixa em **15/09/2026**.
+Os resultados demonstram o comportamento do protótipo em uma base sintética; **não comprovam acurácia ou retorno financeiro em empresas reais**. A versão demonstrativa executa o processamento analítico previamente e o motor de decisão no navegador. API remota de produção, persistência do plano, monitoramento em segundo plano, integração bancária e contratação de serviços são evoluções ainda não implementadas. A data dos cenários é fixa em **15/09/2026**.
 
 Uma próxima etapa seria validar as hipóteses com lojistas, avaliar o modelo em dados autorizados e desenhar uma integração com conciliação e consentimento. Essas etapas estão descritas na [proposta e evolução](docs/PROPOSTA.md#próximas-etapas).
 
@@ -115,11 +119,15 @@ Uma próxima etapa seria validar as hipóteses com lojistas, avaliar o modelo em
 
 Primeira turma de graduação em **Ciência de Dados e Inteligência Artificial da UFSCar — campus Sorocaba**.
 
-- Felipe Pezzato Toledo Prado
-- Gustavo Eiji Tomita Camelo
-- Otávio André Martinez
-- Rhédy Marques Silva
-- Vitor Sotto Rodrigues
+Contribuições descritas no documento executivo da equipe:
+
+| Integrante | Contribuições |
+| --- | --- |
+| Felipe Pezzato Toledo Prado | Estrutura da solução e do problema; planejamento e implementação do front-end; documento, planejamento do pitch e edição do vídeo. |
+| Gustavo Eiji Tomita Camelo | Escrita do documento, slides de apresentação e fluxograma da solução. |
+| Otávio André Martinez | Construção do back-end analítico e do motor de cálculo; escolha e implementação dos modelos estatísticos; geração da base sintética; planejamento e roteiro do pitch, documento e apresentação no vídeo. |
+| Rhédy Marques Silva | Protótipo inicial, estruturação do relatório, escrita do documento, roteiro e edição do vídeo. |
+| Vitor Sotto Rodrigues | Planejamento e elaboração do problema, escrita, revisão e detalhamento do documento. |
 
 **Orientação:** Profa. Dra. Adriane Portela — Estatística, UFSCar.
 

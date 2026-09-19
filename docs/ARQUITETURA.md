@@ -2,6 +2,25 @@
 
 [← Voltar à apresentação](../README.md)
 
+## Camadas implementadas
+
+A separação abaixo segue a seção 5.1 do documento executivo do Antecipa e os arquivos do repositório.
+
+| Camada | Implementação | Onde executa na demonstração |
+| --- | --- | --- |
+| Construção da base | `gerar_base_ficticia.py`: vendas, recebíveis, compromissos e perfis sintéticos com regras e sementes declaradas. | Python, antes da demonstração. |
+| Processamento analítico | `work/train_model.py`, `work/montecarlo.py` e `work/enrich_model.py`: treinamento, teste temporal, cenários de incerteza e caso de pouco histórico. | Python, com exportação para `dist/data.json`. |
+| Motor de cálculo e decisão | `dist/engine.js`: fluxo de caixa, diagnóstico determinístico, custos, campanhas, comparação e recomendação. | JavaScript no navegador; também executável em Node.js para testes. |
+| Apresentação | `prototipo/` e painel complementar em `dist/`: gráficos, explicações, controles e Plano da Sessão. | Navegador, lendo o JSON e chamando o motor. |
+
+### Back-end analítico e servidor remoto
+
+O projeto possui processamento analítico e regras de negócio implementados. O termo **back-end**, usado nos créditos do documento executivo, identifica esse trabalho de construção dos modelos, da base e do motor. Ele não deve ser confundido com a disponibilidade de uma API remota de produção.
+
+Na seção 5.1, o documento descreve a demonstração como **sem backend remoto**: as previsões são preparadas em Python e o cálculo interativo roda no navegador. O GitHub Pages serve os arquivos estáticos; não executa os scripts Python. Da mesma forma, `python -m http.server` serve os arquivos localmente, sem oferecer um endpoint de inferência.
+
+Para um produto integrado, o documento propõe serviços por API, consentimento, conciliação de fontes e validação comercial. Essa evolução aproveitaria as camadas existentes, com os ajustes necessários para operação em produção.
+
 ## Duas interfaces, um motor
 
 | Entrada | Uso | Fonte de dados |
