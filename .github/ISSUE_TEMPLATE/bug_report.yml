@@ -1,0 +1,32 @@
+name: Relatar um problema
+description: Informe uma falha na demonstração, nos cálculos ou na documentação.
+title: '[Problema] '
+body:
+  - type: markdown
+    attributes:
+      value: Use somente dados sintéticos. Não inclua dados de clientes, senhas ou chaves.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Como reproduzir
+      description: Informe a interface, o negócio, o horizonte e os controles utilizados.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado observado
+      description: Inclua mensagens de erro ou capturas, se ajudarem.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Navegador, sistema operacional e versão do Python ou Node.js, quando relevante.
