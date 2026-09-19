@@ -1,57 +1,29 @@
 # Guia do grupo — Antecipa
 
-## Acessar o repositório público
+O repositório público é a apresentação técnica do projeto: [github.com/rhedymarques/antecipa-inovathon](https://github.com/rhedymarques/antecipa-inovathon).
 
-O código está disponível publicamente em https://github.com/rhedymarques/antecipa-inovathon. Qualquer pessoa pode abrir ou clonar o repositório sem convite. Permissão de escrita continua restrita aos colaboradores autorizados no GitHub.
+## Abrir a demonstração
 
-Para colaborar, trabalhe em uma branch própria e abra um pull request. Não publique dados reais de clientes, senhas ou chaves: os dados deste projeto são fictícios.
-
-## Abrir a demonstração no computador
-
-1. Na página pública do repositório, use **Code → Download ZIP** e extraia o arquivo, ou clone com Git.
-2. Instale Python 3.12 ou mais recente, se ainda não tiver Python.
-3. Abra o terminal na pasta extraída e execute:
+Clone o repositório ou use **Code → Download ZIP** e extraia o arquivo. Na raiz, com Python 3.12+:
 
 ```bash
-python -m http.server 8765 --bind 127.0.0.1 --directory dist
+python -m http.server 8765 --bind 127.0.0.1
 ```
 
-4. Abra http://localhost:8765 no navegador.
-5. Para encerrar, pressione Ctrl+C no terminal.
+Abra **http://127.0.0.1:8765/prototipo/**. No Windows, `py -3` pode substituir `python`. Encerre com `Ctrl+C`.
 
-Para visualizar a demonstração, não é necessário instalar scikit-learn: as previsões já estão incluídas. Não abra apenas o HTML com duplo clique, pois o navegador precisa carregar o JSON pelo servidor local.
+A interface principal fica em `prototipo/`. O painel técnico com os quatro casos fica em `http://127.0.0.1:8765/dist/`. As duas páginas usam o mesmo motor e as previsões já incluídas; não é necessário instalar bibliotecas de aprendizado de máquina.
 
-## Treinar novamente
+## Apresentar e colaborar
 
-```bash
-python -m venv .venv
-```
+- [README](README.md): visão do projeto, equipe e roteiro de três minutos.
+- [Proposta](docs/PROPOSTA.md): problema, diferenciais e próximas etapas.
+- [Metodologia](docs/METODOLOGIA.md): avaliação, hipóteses e limites.
+- [Reprodução](docs/REPRODUCAO.md): gerar os dados, treinar e testar.
+- [Contribuição](CONTRIBUTING.md): fluxo de branch e pull request.
 
-Ative o ambiente virtual conforme seu sistema. No PowerShell do Windows, também é possível usar diretamente:
+## Limites a explicar
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe work/train_model.py
-```
+Os dados são sintéticos. O navegador usa previsões calculadas previamente e simula o caixa ao alterar os controles. As faixas de incerteza continuam as do cenário-base. Open Finance, DDA e Cielo Farol não estão integrados, e nenhuma transação é executada.
 
-O script recria dados sintéticos e previsões. O script principal chama também o modelo de pouco histórico em `work/enrich_model.py`.
-
-## O que existe em cada pasta
-
-- `dist/`: interface, simulador, previsões, pagamentos sintéticos e notas conceituais.
-- `work/train_model.py`: geração reproduzível e treinamento dos modelos individuais.
-- `work/enrich_model.py`: modelo baseado em empresas semelhantes e dados contábeis complementares.
-- `work/test_engine.js`: testes das contas, diagnósticos e recomendações; execute com `node work/test_engine.js`.
-- `requirements.txt`: dependências do treinamento.
-
-## Colaborar
-
-Criem uma branch para cada alteração e abram um pull request antes de integrar na branch principal. A visibilidade pública permite leitura e clone, mas não concede permissão para enviar mudanças diretamente.
-
-## Código e site têm acessos separados
-
-O repositório público não torna automaticamente público o site hospedado no Sites. O código pode ser executado localmente pelas instruções acima; acesso e publicação do site continuam sob configuração separada do proprietário.
-
-## Limitações a explicar no pitch
-
-As Random Forests foram treinadas com dados sintéticos. A página carrega previsões previamente calculadas e simula o caixa em tempo real. Open Finance, DDA e Cielo Farol não estão integrados. O modelo de pouco histórico ainda não tem validação independente. Nenhuma transação financeira é executada.
+A permissão pública permite ler e clonar o repositório; escrita continua restrita aos colaboradores. GitHub e Sites têm históricos e acessos separados: um push não publica nem atualiza automaticamente o site.

@@ -25,15 +25,12 @@ saber distinguir os casos antes de recomendar qualquer coisa.
 | Linha & Cor | Loja de roupas | Timing, severa | É lucrativa e mesmo assim fica negativa quando a coleção vence |
 | Mercado Bom Preço | Mercado de bairro | Margem | Gasta mais do que recebe — antecipar **não** resolve |
 
-Diagnóstico dos últimos 90 dias, calculado pelo próprio script:
+O gerador imprime o diagnóstico dos últimos 90 dias, incluindo entradas, saídas,
+folga, pior saldo e dias negativos. Para consultar os valores da versão executada,
+rode `python gerar_base_ficticia.py`, conforme o [guia de reprodução](../docs/REPRODUCAO.md).
+Esse diagnóstico histórico não é a previsão futura exibida pela interface.
 
-| Negócio | Entra | Sai | Folga | Pior saldo | Dias negativos |
-|---|---|---|---|---|---|
-| Bar do Léo | R$ 352.921 | R$ 257.283 | +27,1% | −R$ 712 | 1 |
-| Linha & Cor | R$ 355.284 | R$ 303.343 | +14,6% | −R$ 24.482 | 17 |
-| Mercado Bom Preço | R$ 409.093 | R$ 428.049 | −4,6% | −R$ 22.459 | 73 |
-
-**Por que essa diferença importa.** A loja de roupas tem folga de 15,5% e ainda assim
+**Por que essa diferença importa.** A loja de roupas tem folga positiva e ainda assim
 fura o caixa: o problema é *quando* o dinheiro chega, não *quanto*. Já o mercadinho tem
 folga negativa: nenhuma antecipação conserta isso, ela só adia o buraco e cobra taxa por
 isso. Recomendar antecipação para o mercadinho seria exatamente o comportamento que o

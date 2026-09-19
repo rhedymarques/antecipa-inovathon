@@ -1,0 +1,36 @@
+name: Verificações
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Sintaxe e regras do motor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validar JavaScript
+        run: |
+          node --check dist/engine.js
+          node --check dist/app.js
+          node --check dist/features.js
+          node --check prototipo/app.js
+          node --check work/test_engine.js
+      - name: Validar Python
+        run: python -m compileall -q gerar_base_ficticia.py work
+      - name: Testar invariantes financeiras e cenários
+        run: node work/test_engine.js

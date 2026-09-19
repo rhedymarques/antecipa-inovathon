@@ -1,5 +1,7 @@
 # Handoff do front — Antecipa
 
+> Registro de implementação em ordem histórica. Para o estado atual da interface, consulte [LEIA-ME.md](LEIA-ME.md); as revisões de 17/09 sobre campanhas substituem as pendências anteriores que diziam que a promoção ainda não estava implementada.
+
 Atualizado em **17/09/2026**. Este registro pertence apenas à interface em `prototipo/`; o handoff da raiz é mantido pelo trabalho geral e pelo back-end.
 
 ## Estado atual: campanhas comerciais para a mentoria

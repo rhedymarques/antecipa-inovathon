@@ -1,5 +1,36 @@
 # Handoff — Antecipa
 
+## Revisão de apresentação — 19/09/2026
+
+A entrada atual para avaliadores é o [README](README.md), com captura real da interface, proposta, roteiro curto e mapa do código. Sirva a **raiz** com `python -m http.server 8765 --bind 127.0.0.1` e abra `/prototipo/`. O caminho `/dist/` é o painel técnico complementar, não a interface principal da apresentação.
+
+### Alterações
+
+- README reorganizado e documentação de proposta, arquitetura, metodologia e reprodução em `docs/`.
+- Guia do grupo alinhado à interface principal. O treino foi documentado corretamente em duas etapas: gerador e treinamento.
+- Captura real do protótipo em `docs/assets/prototipo.png`, com Bar do Léo em 60 dias.
+- GitHub Actions para sintaxe e testes financeiros; workflow manual separado para reprodução completa.
+- Guia de contribuição, modelos de issue e pull request e configuração básica de edição.
+- Registros antigos do front identificados como históricos; a documentação atual reconhece que campanhas já estão integradas.
+- Nenhuma mudança nos cálculos, previsões incluídas, identidade dos negócios ou publicação do site.
+
+### Verificações locais
+
+- `node work/test_engine.js` passou com os dados incluídos.
+- `node --check` passou em `dist/engine.js`, `dist/app.js`, `dist/features.js`, `prototipo/app.js` e `work/test_engine.js`.
+- `python -m compileall -q gerar_base_ficticia.py work` passou.
+- Em uma cópia separada, Python 3.12 e as dependências de `requirements.txt`: geração, treino completo e testes contra os dados regenerados passaram. Os MAEs impressos coincidiram com os dos dados incluídos.
+- Interface verificada em Edge: captura desktop, Bar do Léo e Linha & Cor em 30/60 dias a 390 px de largura, ausência de rolagem horizontal e erros JavaScript, foco de teclado e recusa de campanhas com desconto de 0% e 50%.
+- Links relativos da nova documentação conferidos contra os arquivos do repositório.
+
+### Limites mantidos
+
+Dados e parâmetros continuam sintéticos, sem validação real, integração ou execução financeira. A faixa de Monte Carlo continua exclusiva do cenário-base. As diferenças de horizonte do contrato do motor permanecem documentadas em [ARQUITETURA.md](docs/ARQUITETURA.md#fronteiras-importantes); este polimento não altera regras financeiras.
+
+## Registro técnico anterior — 17/09/2026
+
+As seções abaixo preservam decisões e verificações daquela revisão. Valores de exemplo, instruções centradas em `dist/` e pendências de integração devem ser lidos com sua data; os guias acima descrevem a entrada atual.
+
 Estado verificado em **17/09/2026** para o II Inovathon SemAd 2026, desafio Cielo “Inteligência de Caixa para PMEs”.
 
 ## Objetivo e tese
