@@ -17,7 +17,7 @@ Obrigado pelo interesse no Antecipa. Comece pelo [README](README.md) e pela [arq
 - Não remova avisos de cobertura parcial, custos, incerteza ou ausência de integração.
 - Não apresente resultados sintéticos como validação de mercado ou desempenho real.
 - Mudanças no motor precisam manter coerência entre saldo, recebíveis, custos e horizonte.
-- Publicar código no GitHub não atualiza automaticamente o site hospedado.
+- O GitHub Pages publica a raiz de `main` pela configuração existente. Uma hospedagem no Sites tem configuração separada; não presuma sincronização entre elas.
 
 ## Relatar um problema
 

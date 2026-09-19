@@ -8,7 +8,9 @@
 ![Estágio: protótipo acadêmico](https://img.shields.io/badge/estágio-protótipo_acadêmico-0868ae)
 ![Dados: 100% sintéticos](https://img.shields.io/badge/dados-100%25_sintéticos-526779)
 
-[Conheça a proposta](docs/PROPOSTA.md) · [Execute a demonstração](#execute-a-demonstração) · [Entenda o método](docs/METODOLOGIA.md) · [Explore o código](#mapa-do-repositório)
+**[▶ Abrir demonstração — sem instalação](https://rhedymarques.github.io/antecipa-inovathon/prototipo/)**
+
+[Conheça a proposta](docs/PROPOSTA.md) · [Execute localmente](#execute-a-demonstração) · [Entenda o método](docs/METODOLOGIA.md) · [Explore o código](#mapa-do-repositório)
 
 ![Tela real do Antecipa: seleção do negócio, horizonte de 60 dias e previsão de caixa com faixa de incerteza.](docs/assets/prototipo.png)
 
@@ -32,6 +34,10 @@ A proposta começa pelo diagnóstico: antecipação não é a resposta automáti
 **Dois negócios guiam a apresentação:** Bar do Léo e Linha & Cor. Mercado Bom Preço e Café Primeiro Passo permanecem como casos técnicos para testar margem e pouco histórico.
 
 ## Execute a demonstração
+
+**Para experimentar agora:** abra a [demonstração pública](https://rhedymarques.github.io/antecipa-inovathon/prototipo/) no navegador, sem instalação. Os dados e as notificações são simulados.
+
+**Para executar no seu computador**, siga os passos abaixo.
 
 Você só precisa de **Python 3.12+ e um navegador**. Não há build, login, chave de API ou instalação de bibliotecas para visualizar o protótipo: as previsões já estão incluídas.
 

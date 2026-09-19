@@ -4,6 +4,8 @@
 
 ## Apenas abrir a interface
 
+A [demonstração pública](https://rhedymarques.github.io/antecipa-inovathon/prototipo/) já está disponível pelo GitHub Pages, sem instalação. Para executar localmente, use os passos abaixo.
+
 Na raiz do repositório, com Python 3.12+:
 
 ```bash
@@ -70,4 +72,4 @@ O workflow [Reprodução dos modelos](../.github/workflows/reproduce.yml) pode s
 | O treino não encontra um CSV ou perfil. | Execute `gerar_base_ficticia.py` antes de `work/train_model.py`. |
 | A interface mantém uma versão antiga após uma alteração. | Recarregue sem cache com `Ctrl+Shift+R`. |
 
-GitHub e o site hospedado são entregas separadas. Estes comandos e workflows não alteram a publicação ou a visibilidade do site.
+O GitHub Pages está configurado para publicar a raiz da branch `main`; sua rotina de publicação já existia antes dos workflows de verificação. Os comandos locais e os workflows acima não mudam essa configuração. Uma hospedagem no Sites tem histórico e acesso separados.
