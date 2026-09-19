@@ -8,6 +8,7 @@
 | Abrir a demonstração, testar ou treinar novamente. | [Execução e reprodução](REPRODUCAO.md) |
 | Conhecer os modelos, as métricas e suas limitações. | [Metodologia](METODOLOGIA.md) |
 | Navegar pelo código e pelos contratos do motor. | [Arquitetura](ARQUITETURA.md) |
+| Conhecer a implementação analítica e seus scripts. | [Processamento e validação](../work/README.md) |
 | Explorar os controles da interface. | [Guia do protótipo](../prototipo/LEIA-ME.md) |
 | Entender cada arquivo de dados. | [Dicionário da base sintética](../dados_ficticios/LEIA-ME.md) |
 | Colaborar com o projeto. | [Guia de contribuição](../CONTRIBUTING.md) |

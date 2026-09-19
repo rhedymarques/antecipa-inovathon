@@ -1,5 +1,17 @@
 # Handoff — Antecipa
 
+## Alinhamento ao documento executivo — 19/09/2026
+
+Revisão baseada no arquivo `Documento executivo Inovathon (3).pdf` fornecido pela equipe, especialmente nas seções 5.1 (camadas e integração), 5.2 (modelagem), 5.3–5.4 (escopo e evolução) e 7 (contribuições).
+
+- Corrigida a expressão genérica que afirmava ausência de backend. O projeto possui processamento analítico em Python e motor de cálculo em JavaScript; a demonstração não utiliza backend **remoto** ou API de inferência em produção, conforme a seção 5.1 do documento.
+- README, arquitetura, metodologia, proposta e guia do grupo agora descrevem onde cada camada executa. `work/README.md` apresenta os componentes analíticos e sua ligação com o motor e a interface.
+- Créditos da equipe detalhados conforme a seção 7, incluindo a construção do back-end analítico e do motor por Otávio e as contribuições dos demais integrantes.
+- Público inicial, valor esperado para lojista/Cielo e evoluções de canal conversacional, CET e caminhos por custo alinhados ao documento, preservando a distinção entre implementação e proposta.
+- O PDF foi usado como referência de leitura; o arquivo original não foi alterado. Nenhum cálculo, dado ou serviço remoto foi acrescentado por esta revisão de documentação.
+
+Verificação: comparação entre o documento e os scripts, conferência dos links locais e `git diff --check`. A suíte do motor também foi executada, conforme registrado no pull request desta revisão.
+
 ## Revisão de apresentação — 19/09/2026
 
 A entrada atual para avaliadores é o [README](README.md), com captura real da interface, proposta, roteiro curto e mapa do código. Sirva a **raiz** com `python -m http.server 8765 --bind 127.0.0.1` e abra `/prototipo/`. O caminho `/dist/` é o painel técnico complementar, não a interface principal da apresentação.
@@ -47,7 +59,7 @@ O sistema recomenda uma alternativa pelas hipóteses simuladas, mostra custo e e
 ## Acesso e execução para avaliadores
 
 - Repositório público: https://github.com/rhedymarques/antecipa-inovathon
-- A demonstração é HTML, CSS e JavaScript sem build e sem backend.
+- A demonstração usa HTML, CSS e JavaScript sem build. O processamento analítico é feito previamente em Python e o motor interativo roda no navegador, sem servidor remoto de aplicação.
 - Na raiz do projeto, execute:
 
 ```bash
@@ -180,7 +192,7 @@ resolve sozinha o déficit severo.
 
 ## O que ficou de fora
 
-- Backend, autenticação, banco de dados e persistência do plano.
+- API remota de produção, autenticação, banco de dados e persistência do plano. O processamento analítico e o motor de cálculo estão implementados.
 - Inferência em tempo real; a página consome previsões já exportadas em `data.json`.
 - Integrações reais, validação de elegibilidade de recebíveis, gravames e execução de pagamentos, antecipação ou crédito.
 - Calendário bancário, feriados, conciliação entre provedores e importação de dados reais.

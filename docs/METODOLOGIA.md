@@ -10,6 +10,8 @@ As taxas, prazos, custos, estoques, cancelamentos e respostas comerciais são hi
 
 ## Previsão de vendas
 
+A modelagem é implementada na [camada de processamento analítico](../work/README.md), executada em Python antes da demonstração. Seus resultados alimentam o motor de cálculo e a interface por `dist/data.json`.
+
 O `RandomForestRegressor` usa 100 árvores e variáveis de calendário, defasagens e estatísticas móveis de vendas. O modelo prevê 60 dias; o motor converte as vendas previstas em recebimentos conforme mix, taxas e prazos.
 
 A avaliação reserva os últimos **60 dias** do histórico. As janelas de treino são filtradas para que seus alvos não invadam esse período. O comparativo é uma referência simples: **repetir a última semana**.
@@ -44,6 +46,6 @@ Uma campanha elegível não é necessariamente a recomendação principal. A com
 - Elasticidade, custos comerciais e condições de negociação não foram calibrados com lojistas.
 - Calendário bancário, feriados, gravames e elegibilidade real de recebíveis não estão implementados.
 - A API de comparação possui diferenças de tratamento de horizonte documentadas em [arquitetura](ARQUITETURA.md#fronteiras-importantes).
-- Não há dados reais de Open Finance, DDA ou Cielo Farol, nem backend, consentimento, autenticação ou execução de transações.
+- As camadas analítica e de decisão estão implementadas, mas não são expostas por uma API remota de produção nesta demonstração. Não há integração real com Open Finance, DDA ou Cielo Farol, fluxo de consentimento, autenticação ou execução de transações.
 
 O projeto permite inspecionar a proposta e suas regras. Qualquer piloto depende de validação adicional e dados autorizados, conforme as [próximas etapas](PROPOSTA.md#próximas-etapas).
