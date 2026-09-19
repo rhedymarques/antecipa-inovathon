@@ -6,6 +6,8 @@ A entrada atual para avaliadores é o [README](README.md), com captura real da i
 
 ### Alterações
 
+- Demonstração pública existente confirmada em `https://rhedymarques.github.io/antecipa-inovathon/prototipo/`: HTTP 200, gráfico e dois negócios carregados sem erros JavaScript. A configuração consultada do GitHub Pages publica `main` a partir de `/`; nenhuma configuração de hospedagem ou visibilidade foi alterada. O README destaca esse acesso e distingue Pages de Sites.
+
 - README reorganizado e documentação de proposta, arquitetura, metodologia e reprodução em `docs/`.
 - Guia do grupo alinhado à interface principal. O treino foi documentado corretamente em duas etapas: gerador e treinamento.
 - Captura real do protótipo em `docs/assets/prototipo.png`, com Bar do Léo em 60 dias.
