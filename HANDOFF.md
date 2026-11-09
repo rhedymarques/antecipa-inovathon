@@ -1,4 +1,16 @@
-# Handoff — Antecipa
+# Handoff — Antecipa / Preflux
+
+## Evolução para o aplicativo independente Preflux (`rhedymarques/preflux-prototipo`)
+
+A equipe evoluiu o conceito original do **Antecipa** (desenvolvido neste repositório com pipeline analítico em Python `Random Forest` + `Monte Carlo` e motor em JavaScript) para a **Preflux**, posicionada como uma **startup independente** com aplicativo próprio para pequenos negócios.
+
+- **Novo repositório do aplicativo interativo (React 19 + TypeScript + Vite 8 + Tailwind CSS v4):** [`https://github.com/rhedymarques/preflux-prototipo`](https://github.com/rhedymarques/preflux-prototipo)
+- **Documentação para o próximo agente no novo repositório:** consulte `AGENTS.md`, `HANDOFF.md`, `README.md` e `GUIA_DO_GRUPO.md` dentro de `rhedymarques/preflux-prototipo`.
+- **O que foi realizado no `preflux-prototipo`:**
+  - Exportação da base gerada no Figma Make (Prompts 1 a 3) e execução completa do **Prompt 4** e de **6 pacotes adicionais de melhorias** diretamente em código.
+  - Implementação de Onboarding escalável por porte (saldo inicial e vendas mensais + planilha CSV simulada e modelo para download), aba `Início` e `Previsão` com `DiagnosisBadge` (diagnóstico explícito de causa-raiz: *descasamento de prazo* vs. *pressão de margem* vs. *caixa saudável* vs. *pouco histórico*), pílula do dia mais apertado no gráfico (`ForecastChart.tsx`), aba `Vendas` interativa (incluindo repasse `D+7`/`D+30` de `Delivery (app)`), aba `Caixa diário` reativa com filtro e opção de desfazer lançamentos/pagamentos, projeção de qualquer medida sobre o gráfico principal e tela de `Perfil e conexões` 100% funcional com exportação de `.csv`.
+  - Verificação completa via `pnpm typecheck` (`tsc --noEmit`), `pnpm test` (`tests/engine.test.ts` — 7/7 suítes aprovadas) e `pnpm build`.
+- **Estado deste repositório (`antecipa-inovathon`):** permanece intacto como referência do pipeline analítico em Python (`gerar_base_ficticia.py`, `work/train_model.py`, `work/montecarlo.py`, `work/test_engine.js`) e da versão original do Inovathon.
 
 ## Alinhamento ao documento executivo — 19/09/2026
 
